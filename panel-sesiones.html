@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Panel de sesiones CS — Yurest</title>
+
+<!-- Portal: config (auth + sidebar + PANEL_API_BASE), tema y estilos base -->
+<script src="config.js"></script>
+<script>YurestConfig.requireAuth('panel_sesiones');</script>
+<script src="theme.js"></script>
+<link rel="stylesheet" href="style.css">
+
+<!-- Date picker del panel -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+
+<!--
+  Estilos del panel CS importado. Todo va aislado bajo `.panel-cs` para no
+  colisionar con la chrome del portal (sidebar `.sidebar-*`, header `.page-header`
+  / `.btn-menu`). Los selectores de flatpickr, `:root` y `@keyframes` se dejan
+  globales a propósito: el datepicker se renderiza en la raíz del <body>.
+-->
+<style>
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: var(--primary) !important; border-color: var(--primary) !important; }
+  .flatpickr-day.inRange { background: var(--primary-soft) !important; border-color: var(--primary-soft) !important; box-shadow: none !important; }
+
+  /* La paleta histórica del panel se realía a los tokens del portal: hereda
+     colores corporativos y modo oscuro automáticamente, y los estilos inline
+     del HTML que aún usan estas variables siguen resolviendo. */
+  :root {
+    --rojo: var(--primary);            --rojo-hover: var(--primary-dark);
+    --azul-marino: var(--text-emphasis); --azul-marino-claro: var(--text);
+    --rosa: var(--primary-soft);       --azul-claro: var(--tone-blue-fg);
+    --blanco: var(--surface-base);     --gris-claro: var(--surface-muted);
+    --gris-borde: var(--border);       --gris-texto: var(--text-muted);
+  }
+  .panel-cs * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Tipografía del panel: prioriza la corporativa Bw Modelica (var --font-sans),
+     con Poppins como fallback (el contenido del email usa Poppins inline). */
+  .panel-cs { font-family: var(--font-sans), 'Poppins', -apple-system, Arial, sans-serif; font-size: 14px; color: var(--text); line-height: 1.5; }
+  /* Separación inicial bajo la cabecera = misma que entre secciones (18px). */
+  .panel-cs .container { max-width: 1340px; margin: 0 auto; padding-top: 18px; }
+
+  /* ── Layout panorámico: dos columnas en escritorio ───────── */
+  .panel-cs .panel-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .panel-cs .panel-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  /* La columna del email queda FIJA mientras solo se desplaza el formulario de
+     la izquierda. top = su posición natural = cabecera sticky (79px) + el hueco
+     superior (18px) = 97px, de modo que se fija desde el primer píxel de scroll
+     sin ningún salto (queda 18px bajo la cabecera, igual que el ritmo). */
+  .panel-cs .panel-col-sticky { position: sticky; top: 97px; align-self: start; }
+  @media (max-width: 1080px) {
+    .panel-cs .panel-grid { grid-template-columns: 1fr; }
+    .panel-cs .panel-col-sticky { position: static; }
+  }
+
+  /* ── Selector de implementador como chips ──── */
+  .panel-cs .impl-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .panel-cs .impl-tag { padding: 9px 18px; border-radius: var(--radius-pill); border: 1.5px solid var(--border); background: var(--surface-base); color: var(--text-secondary); font-weight: 600; font-size: 13px; font-family: inherit; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+  .panel-cs .impl-tag:hover { border-color: var(--primary-soft-border); color: var(--primary); background: var(--primary-soft); }
+  .panel-cs .impl-tag.activo { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: var(--shadow-primary); }
+
+  /* ── Selector de vista en la cabecera (top-right) ─ */
+  .panel-viewsel { display: flex; gap: 8px; margin-left: auto; }
+  .panel-viewsel .vs-tab { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--radius-pill); border: 1.5px solid var(--primary-soft-border); background: var(--primary-soft); color: var(--primary); font-weight: 600; font-size: 13px; font-family: var(--font-sans); cursor: pointer; transition: background .15s, border-color .15s; }
+  .panel-viewsel .vs-tab svg { flex-shrink: 0; }
+  .panel-viewsel .vs-tab:not(.activo) { background: transparent; border-color: var(--border); color: var(--text-secondary); }
+  .panel-viewsel .vs-tab:not(.activo):hover { border-color: var(--primary-soft-border); color: var(--primary); background: var(--primary-soft); }
+  /* En pantallas estrechas el selector pasa a una 2ª fila a ancho completo. */
+  @media (max-width: 760px) {
+    .page-header { flex-wrap: wrap; row-gap: 10px; }
+    .panel-viewsel { width: 100%; margin-left: 0; flex-wrap: wrap; }
+  }
+
+  /* ── Placeholder "Próximamente" (vistas sin backend aún) ─── */
+  .panel-cs .proximamente-card { max-width: 560px; margin: 0 auto; text-align: center; padding: 56px 28px; }
+  .panel-cs .proximamente-ico { font-size: 44px; line-height: 1; margin-bottom: 14px; }
+  .panel-cs .proximamente-card h2 { font-size: 1.4rem; font-weight: 800; color: var(--text-emphasis); margin: 0 0 8px; }
+  .panel-cs .proximamente-card p { color: var(--text-muted); font-size: .95rem; line-height: 1.5; margin: 0; }
+  .panel-cs .auth-status { font-size: 11px; padding: 6px 12px; border-radius: 16px; background: var(--gris-claro); color: var(--gris-texto); border: 1px solid var(--gris-borde); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .panel-cs .auth-status.ok { background: #E8F0FE; color: #1B8FFD; border-color: #cfe3fd; }
+  .panel-cs .auth-status.no { background: var(--rojo); color: #fff; border-color: var(--rojo); cursor: pointer; }
+  .panel-cs .seccion { background: var(--surface-base); border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 20px 22px; box-shadow: var(--shadow-sm); }
+  .panel-cs .seccion-titulo { font-weight: 700; font-size: 11px; color: var(--primary); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 16px; border-left: 3px solid var(--primary); padding-left: 10px; }
+  .panel-cs label { display: block; font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 5px; margin-top: 14px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .panel-cs label:first-of-type { margin-top: 0; }
+  .panel-cs select, .panel-cs input[type="text"], .panel-cs input[type="number"], .panel-cs textarea { width: 100%; padding: 10px 13px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 14px; background: var(--surface-input); font-family: inherit; color: var(--text); transition: border-color .15s, box-shadow .15s; }
+  .panel-cs select:focus, .panel-cs input:focus, .panel-cs textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); background: var(--surface-base); }
+  .panel-cs .notas-textarea { height: 220px; line-height: 1.55; resize: vertical; }
+  .panel-cs .radio-group { display: flex; gap: 22px; margin-top: 6px; }
+  .panel-cs .radio-group label { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0; cursor: pointer; color: var(--azul-marino); font-weight: 500; text-transform: none; letter-spacing: normal; }
+  .panel-cs .radio-group input { width: auto; accent-color: var(--rojo); }
+  .panel-cs .btn { padding: 11px 18px; border: none; border-radius: var(--radius-md); font-size: 14px; cursor: pointer; font-weight: 600; transition: background .15s, box-shadow .15s, transform .1s; font-family: inherit; }
+  .panel-cs .btn:active { transform: translateY(1px); }
+  .panel-cs .btn-primary { background: var(--primary); color: #fff; width: 100%; margin-top: 12px; box-shadow: var(--shadow-primary); }
+  .panel-cs .btn-primary:hover { background: var(--primary-dark); }
+  .panel-cs .btn-primary:disabled { background: var(--text-disabled); box-shadow: none; cursor: not-allowed; }
+  .panel-cs .btn-secondary { background: var(--surface-muted); color: var(--text-emphasis); border: 1px solid var(--border); }
+  .panel-cs .btn-secondary:hover { background: var(--surface-hover); }
+  .panel-cs .btn-success { background: #16a34a; color: #fff; width: 100%; }
+  .panel-cs .btn-success:hover { background: #15803d; }
+  .panel-cs .btn-success:disabled { background: var(--text-disabled); cursor: not-allowed; }
+  .panel-cs .btn-load { background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 12px; padding: 9px 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .panel-cs .btn-load:hover { background: var(--surface-hover); color: var(--text-emphasis); }
+  .panel-cs .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+  .panel-cs .btn-row .btn { flex: 1; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .panel-cs .estado { text-align: center; font-size: 13px; margin-top: 12px; min-height: 20px; color: var(--azul-claro); font-weight: 500; }
+  .panel-cs .estado.error { color: var(--rojo); }
+  .panel-cs .info-box { background: var(--rosa); color: var(--azul-marino); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; margin-bottom: 10px; }
+
+  /* ── Atajos de rango de fechas ─────────────── */
+  .panel-cs .rango-atajos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .panel-cs .rango-atajos button {
+    padding: 5px 11px; font-size: 11px; font-weight: 600;
+    background: var(--gris-claro); color: var(--gris-texto);
+    border: 1px solid var(--gris-borde); border-radius: 14px;
+    cursor: pointer; font-family: inherit;
+    text-transform: uppercase; letter-spacing: 0.4px; transition: all 0.15s;
+  }
+  .panel-cs .rango-atajos button:hover { background: var(--rojo); color: white; border-color: var(--rojo); }
+
+  /* ── Tabs de navegación ────────────────────── */
+  .panel-cs .nav-tabs { background: var(--surface-base); display: flex; border: 1.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 18px; box-shadow: var(--shadow-sm); }
+  .panel-cs .nav-tab {
+    flex: 0 0 auto; padding: 13px 26px; border: none; background: transparent;
+    cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 3px solid transparent; transition: all 0.2s;
+  }
+  .panel-cs .nav-tab:hover { background: var(--surface-muted); color: var(--text-emphasis); }
+  .panel-cs .nav-tab.activo { color: var(--primary); border-bottom-color: var(--primary); background: var(--surface-muted); }
+
+  /* ── Vistas ────────────────────────────────── */
+  .panel-cs #vista-clientes, .panel-cs #vista-dashboard { display: none; }
+
+  /* ── Modal ─────────────────────────────────── */
+  .panel-cs .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(22, 26, 61, 0.55); z-index: 1000;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .panel-cs .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 100%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+  .panel-cs .modal-header { padding: 18px 22px; border-bottom: 1px solid var(--gris-borde); display: flex; justify-content: space-between; align-items: center; }
+  .panel-cs .modal-body { padding: 18px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .panel-cs .modal-close { background: var(--gris-claro); border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px; color: var(--gris-texto); transition: all 0.15s; }
+  .panel-cs .modal-close:hover { background: var(--rojo); color: white; }
+
+  /* ── Toggle vista (listado/gráfica) ───────── */
+  .panel-cs .toggle-vista { display: inline-flex; background: var(--gris-claro); border-radius: 8px; padding: 3px; gap: 2px; }
+  .panel-cs .toggle-vista button {
+    padding: 6px 14px; font-size: 11px; font-weight: 600;
+    background: transparent; color: var(--gris-texto);
+    border: none; border-radius: 6px; cursor: pointer;
+    font-family: inherit; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s;
+  }
+  .panel-cs .toggle-vista button:hover { color: var(--azul-marino); }
+  .panel-cs .toggle-vista button.activo { background: white; color: var(--rojo); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+  /* ── Tarjeta clickable ─────────────────────── */
+  .panel-cs .metric-clickable { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+  .panel-cs .metric-clickable:hover { background: white; border-color: var(--rojo); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(249, 90, 92, 0.15); }
+
+  /* ── Tarjetas dashboard ────────────────────── */
+  .panel-cs .metric-card { background: var(--gris-claro); padding: 14px; border-radius: 8px; }
+  .panel-cs .metric-label { margin: 0; font-size: 11px; color: var(--gris-texto); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .panel-cs .metric-value { margin: 6px 0 0; font-size: 26px; font-weight: 700; color: var(--azul-marino); }
+  .panel-cs .metric-sub { margin: 2px 0 0; font-size: 11px; color: var(--gris-texto); }
+
+  /* ── Lista de sesiones ─────────────────────── */
+  .panel-cs .lista-sesiones { border: 1px solid var(--gris-borde); border-radius: 8px; max-height: 360px; overflow-y: auto; background: var(--blanco); }
+  .panel-cs .sesion-item { padding: 10px 14px; border-bottom: 1px solid var(--gris-borde); cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 12px; }
+  .panel-cs .sesion-item:last-child { border-bottom: none; }
+  .panel-cs .sesion-item:hover { background: var(--gris-claro); }
+  .panel-cs .sesion-item.activo { background: var(--rosa); }
+  .panel-cs .sesion-fecha { font-size: 11px; color: var(--gris-texto); font-weight: 600; min-width: 70px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .panel-cs .sesion-titulo-item { font-size: 13px; color: var(--azul-marino); font-weight: 500; flex: 1; }
+
+  /* ── Email preview ─────────────────────────── */
+  /* Fondo = superficie del tema: en vacío se funde con el modo oscuro; al
+     generar, el HTML del email (con su propio fondo blanco) lo cubre, así que
+     la vista previa sigue siendo fiel a cómo se verá el correo. */
+  .panel-cs .email-preview { background: var(--surface-base); padding: 0; border-radius: var(--radius-md); border: 1px solid var(--border); margin-top: 12px; overflow: hidden; min-height: 320px; }
+  .panel-cs .email-preview[contenteditable="true"]:focus { outline: 2px solid var(--primary); }
+</style>
+</head>
+<body>
+
+<!-- Sidebar compartida del portal -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<nav class="sidebar" id="sidebar"></nav>
+<script src="sidebar.js"></script>
+<script>YurestSidebar.render('panel_sesiones');</script>
+
+<!-- Cabecera autoría manual (no data-title) para alojar el selector de vista a
+     la derecha, igual que en proyectos.html. -->
+<header class="page-header">
+  <button class="btn-menu" onclick="openSidebar()" title="Menú" aria-label="Abrir menú lateral">
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <img class="brand-logo" src="favicon.svg" alt="Yurest">
+  <h1>Panel de sesiones CS</h1>
+  <nav class="panel-viewsel">
+    <button class="vs-tab activo" data-view="panel" onclick="cambiarVista('panel')" title="Panel de sesión">
+      <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6a1 1 0 0 1 1 1v1h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1z"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>
+      Panel de sesión
+    </button>
+    <button class="vs-tab" data-view="clientes" onclick="cambiarVista('clientes')" title="Vista cliente (próximamente)">
+      <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Vista cliente
+    </button>
+    <button class="vs-tab" data-view="dashboard" onclick="cambiarVista('dashboard')" title="Dashboard (próximamente)">
+      <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Dashboard
+    </button>
+  </nav>
+</header>
+
+<div class="page-content">
+<div class="panel-cs">
+<div class="container">
+
+  <!-- El selector de vista vive ahora en la cabecera (.panel-viewsel). Cuando
+       se construyan los backends de Dashboard y Vista cliente, añadir sus
+       botones .vs-tab ahí junto al de "Panel de sesión". -->
+
+  <div id="vista-panel">
+
+  <div class="panel-grid">
+  <!-- Columna izquierda: cargar la sesión y elegir el proyecto destino -->
+  <div class="panel-col">
+
+  <div class="seccion">
+    <div class="seccion-titulo">Notas de Gemini</div>
+    <label>Implementador</label>
+    <div class="impl-tags" id="impl-tags">
+      <button type="button" class="impl-tag" data-impl="mario" onclick="seleccionarImplementador('mario')">Mario</button>
+      <button type="button" class="impl-tag" data-impl="carlos" onclick="seleccionarImplementador('carlos')">Carlos</button>
+      <button type="button" class="impl-tag" data-impl="hugo" onclick="seleccionarImplementador('hugo')">Hugo</button>
+    </div>
+    <input type="hidden" id="selector-persona">
+    <label>Seleccionar sesión <span style="color: var(--gris-texto); text-transform: none; letter-spacing: normal; font-weight: 400;">(últimos 7 días laborales)</span></label>
+    <select id="selector-sesion" onchange="cargarSesion(this.value)">
+      <option value="">— Selecciona primero una persona —</option>
+    </select>
+    <button class="btn btn-load" style="margin-top: 8px; width: 100%;" onclick="cargarListadoSesiones()">🔄 Recargar</button>
+    <div id="doc-info" style="margin-top: 12px;"></div>
+    <label>Contenido de las notas (editable)</label>
+    <textarea id="notas" class="notas-textarea" placeholder="Carga una sesión o pega aquí las notas manualmente..."></textarea>
+  </div>
+
+    <div class="seccion">
+    <div class="seccion-titulo">Proyecto y Sesión</div>
+    <label>Portfolio</label>
+    <select id="portfolio" onchange="cargarProyectos()">
+      <option value="">— Selecciona un portfolio —</option>
+    </select>
+    <label>Proyecto</label>
+    <select id="proyecto" onchange="cargarTareas()"><option value="">— Selecciona primero un portfolio —</option></select>
+    <label>Tarea / Sesión</label>
+    <select id="tarea"><option value="">— Selecciona primero un proyecto —</option></select>
+  </div>
+
+  <div class="seccion">
+    <div class="seccion-titulo">Datos de la sesión</div>
+    <label>Título de la reunión</label>
+    <input type="text" id="titulo" placeholder="Ej: Cliente X - Configuración productos">
+    <label>Fecha</label>
+    <input type="text" id="fecha" placeholder="29 de mayo de 2026">
+        <label>Correos invitados</label>
+    <input type="text" id="correos-invitados" placeholder="correo1@x.com, correo2@x.com...">
+    <label>Participantes</label>
+    <input type="text" id="participantes" placeholder="Juan Pérez, María García...">
+    <label>Asistencia</label>
+    <div class="radio-group">
+      <label><input type="radio" name="asistencia" value="Show" checked> Show</label>
+      <label><input type="radio" name="asistencia" value="No Show"> No Show</label>
+    </div>
+    <label>Duración (minutos)</label>
+    <input type="number" id="duracion" value="60" min="1" max="480">
+    <label>Enlace de la grabación (opcional)</label>
+    <input type="text" id="youtube" placeholder="https://...">
+
+  </div>
+
+  </div><!-- /columna izquierda (formulario) -->
+  <!-- Columna derecha: vista previa del email (sticky en escritorio) -->
+  <div class="panel-col panel-col-sticky">
+
+  <div class="seccion">
+    <div class="seccion-titulo">Resumen del email</div>
+    <button class="btn btn-primary" id="btn-gen" onclick="generar()">🧠 Generar resumen con IA</button>
+    <label style="margin-top: 16px;">Vista previa del email (editable — clic dentro para modificar)</label>
+    <div id="resumen" class="email-preview" contenteditable="false">
+      <div style="padding: 40px 24px; text-align: center; color: var(--gris-texto);">
+        La vista previa del email aparecerá aquí después de generar el resumen.
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="copiar()">📋 Copiar con formato</button>
+      <button class="btn btn-success" id="btn-save" onclick="guardar()" disabled>💾 Guardar en Asana</button>
+    </div>
+    <div id="estado" class="estado"></div>
+  </div>
+
+  </div><!-- /columna derecha -->
+  </div><!-- /panel-grid -->
+
+  </div><!-- /vista-panel -->
+
+  <!-- Placeholder mostrado por Vista cliente y Dashboard hasta que tengan
+       backend (panel/cliente, panel/dashboard-general). Las vistas reales de
+       abajo quedan en el DOM, ocultas, para cuando se construyan. -->
+  <div id="vista-proximamente" style="display:none">
+    <div class="seccion proximamente-card">
+      <div class="proximamente-ico">🚧</div>
+      <h2>Próximamente</h2>
+      <p id="proximamente-label">Esta vista estará disponible pronto.</p>
+    </div>
+  </div>
+
+
+  <!-- ══════════════ VISTA: DASHBOARD GENERAL ══════════════ -->
+  <div id="vista-dashboard">
+    <div class="seccion">
+      <div class="seccion-titulo">Dashboard general</div>
+      <label>Implementador</label>
+      <div class="impl-tags" id="dash-impl-tags">
+        <button type="button" class="impl-tag" data-impl="mario" onclick="seleccionarImplDash('mario')">Mario</button>
+        <button type="button" class="impl-tag" data-impl="carlos" onclick="seleccionarImplDash('carlos')">Carlos</button>
+        <button type="button" class="impl-tag" data-impl="hugo" onclick="seleccionarImplDash('hugo')">Hugo</button>
+      </div>
+      <input type="hidden" id="dash-implementador">
+      <div id="dash-contenido" style="margin-top: 20px;">
+        <div style="padding: 40px; text-align: center; color: var(--text-muted);">Selecciona un implementador para ver el dashboard</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ VISTA: CLIENTES ══════════════ -->
+  <div id="vista-clientes">
+    <div class="seccion">
+      <div class="seccion-titulo">Vista cliente</div>
+      <label>Implementador</label>
+      <div class="impl-tags" id="cli-impl-tags">
+        <button type="button" class="impl-tag" data-impl="mario" onclick="seleccionarImplCli('mario')">Mario</button>
+        <button type="button" class="impl-tag" data-impl="carlos" onclick="seleccionarImplCli('carlos')">Carlos</button>
+        <button type="button" class="impl-tag" data-impl="hugo" onclick="seleccionarImplCli('hugo')">Hugo</button>
+      </div>
+      <input type="hidden" id="cli-implementador">
+      <label>Cliente</label>
+      <select id="cli-proyecto" onchange="cargarVistaCliente()">
+        <option value="">— Selecciona primero un implementador —</option>
+      </select>
+      <label>Rango de fechas</label>
+      <input type="text" id="cli-rango" placeholder="Selecciona un rango..." readonly style="cursor: pointer;">
+      <input type="hidden" id="cli-desde">
+      <input type="hidden" id="cli-hasta">
+      <div class="rango-atajos">
+        <button type="button" onclick="aplicarAtajo('semana')">Esta semana</button>
+        <button type="button" onclick="aplicarAtajo('mes')">Este mes</button>
+        <button type="button" onclick="aplicarAtajo('mes-anterior')">Mes anterior</button>
+        <button type="button" onclick="aplicarAtajo('30dias')">Últimos 30 días</button>
+        <button type="button" onclick="aplicarAtajo('90dias')">Últimos 90 días</button>
+        <button type="button" onclick="aplicarAtajo('todo')">Todo</button>
+      </div>
+      <div id="cli-contenido" style="margin-top: 16px;">
+        <div style="padding: 40px; text-align: center; color: var(--gris-texto);">Selecciona un cliente para ver su histórico</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Modal de tareas pendientes -->
+<div id="modal-pendientes" class="modal-overlay" onclick="if(event.target===this) cerrarPendientes()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <p style="margin: 0; font-size: 11px; color: #F95A5C; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px;">Tareas pendientes</p>
+        <p id="modal-pendientes-header" style="margin: 4px 0 0; font-size: 14px; color: #5A6075;"></p>
+      </div>
+      <button class="modal-close" onclick="cerrarPendientes()">✕</button>
+    </div>
+    <div id="modal-pendientes-lista" class="modal-body"></div>
+  </div>
+</div>
+
+<!-- Modal de sesiones agendadas esta semana -->
+<div id="modal-agendadas" class="modal-overlay" onclick="if(event.target===this) cerrarAgendadas()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <p style="margin: 0; font-size: 11px; color: #1B8FFD; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px;">Sesiones agendadas</p>
+        <p id="modal-agendadas-header" style="margin: 4px 0 0; font-size: 14px; color: #5A6075;"></p>
+      </div>
+      <button class="modal-close" onclick="cerrarAgendadas()">✕</button>
+    </div>
+    <div id="modal-agendadas-lista" class="modal-body"></div>
+  </div>
+</div>
+
+<!-- Modal de detalle de sesión -->
+<div id="modal-sesion" class="modal-overlay" onclick="if(event.target===this) cerrarSesionDetalle()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <p style="margin: 0; font-size: 11px; color: #F95A5C; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px;">Detalle de sesión</p>
+        <p id="modal-sesion-header" style="margin: 4px 0 0; font-size: 14px; color: #5A6075;"></p>
+      </div>
+      <button class="modal-close" onclick="cerrarSesionDetalle()">✕</button>
+    </div>
+    <div id="modal-sesion-lista" class="modal-body"></div>
+  </div>
+</div>
+
+</div><!-- /panel-cs -->
+</div><!-- /page-content -->
+
+<script>
+  // ── Routing al backend del panel en n8n ──
+  // El front llama a rutas relativas estilo '/api/<recurso>/<id>'. Este shim
+  // las reescribe a los webhooks n8n bajo WEBHOOK_BASE + '/panel', convirtiendo
+  // el id de la ruta en query param (los webhooks n8n usan rutas estáticas).
+  // El OAuth de Google/Asana lo gestiona n8n por credencial: no hay login aquí.
+  // Las llamadas del portal (config.js, sidebar) usan URLs absolutas y NO se
+  // ven afectadas por este shim.
+  const PANEL_BASE = ((window.YurestConfig && YurestConfig.WEBHOOK_BASE) || '') + '/panel';
+  (function () {
+    const _f = window.fetch.bind(window);
+    // recurso → nombre del query param en que se convierte el id de la ruta
+    const PATH_PARAM = { projects: 'key', tasks: 'gid', notes: 'docId', 'asana-task': 'gid', cliente: 'gid' };
+    window.fetch = function (url, opts) {
+      if (typeof url === 'string' && url.startsWith('/api/')) {
+        const [path, qs] = url.split('?');
+        const parts = path.split('/').filter(Boolean); // ['api', recurso, id?]
+        const recurso = parts[1];
+        if (PATH_PARAM[recurso] && parts[2] !== undefined) {
+          const extra = PATH_PARAM[recurso] + '=' + encodeURIComponent(parts.slice(2).join('/'));
+          url = PANEL_BASE + '/' + recurso + '?' + extra + (qs ? '&' + qs : '');
+        } else {
+          url = PANEL_BASE + '/' + parts.slice(1).join('/') + (qs ? '?' + qs : '');
+        }
+      }
+      return _f(url, opts);
+    };
+  })();
+
+  let proyectos = [];
+  let datosResumen = null;
+
+  // Portfolios fijos (catálogo de UI). El backend ya mapea key→GID de Asana.
+  (function () {
+    const sel = document.getElementById('portfolio');
+    [{ key: 'mario', name: 'Proyectos Mario' }, { key: 'hugo', name: 'Proyectos Hugo' }, { key: 'carlos', name: 'Proyectos Carlos' }].forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.key; o.textContent = p.name;
+      sel.appendChild(o);
+    });
+  })();
+
+  function cargarProyectos() {
+    const key = document.getElementById('portfolio').value;
+    const sel = document.getElementById('proyecto');
+    if (!key) {
+      proyectos = [];
+      sel.innerHTML = '<option value="">— Selecciona primero un portfolio —</option>';
+      return;
+    }
+    sel.innerHTML = '<option>⏳ Cargando proyectos...</option>';
+    fetch('/api/projects/' + key).then(r => r.json()).then(data => {
+      proyectos = data;
+      render(data);
+      // Si hay una sesión seleccionada con título, intentar emparejar proyecto
+      const tituloSesion = (document.getElementById('titulo').value || '').toLowerCase();
+      if (tituloSesion) {
+        const match = proyectos.find(p =>
+          tituloSesion.includes(p.name.toLowerCase().substring(0, 10)) ||
+          p.name.toLowerCase().includes(tituloSesion.substring(0, 10))
+        );
+        if (match) {
+          sel.value = match.gid;
+          cargarTareas();
+        }
+      }
+    });
+  }
+  function render(lista) {
+    const sel = document.getElementById('proyecto');
+    sel.innerHTML = '<option value="">— Selecciona un proyecto —</option>';
+    lista.forEach(p => { const o = document.createElement('option'); o.value = p.gid; o.textContent = p.name; sel.appendChild(o); });
+  }
+  function cargarTareas() {
+    const gid = document.getElementById('proyecto').value;
+    const sel = document.getElementById('tarea');
+    if (!gid) return;
+    sel.innerHTML = '<option>Cargando...</option>';
+    fetch('/api/tasks/' + gid).then(r => r.json()).then(tareas => {
+      sel.innerHTML = '<option value="">— Selecciona una tarea —</option>';
+      tareas.forEach(t => { const o = document.createElement('option'); o.value = t.gid; o.textContent = t.name; sel.appendChild(o); });
+
+      // Auto-sugerir la tarea que mejor coincida con el título de la sesión
+      const tituloSesion = (document.getElementById('titulo').value || '').trim();
+      if (tituloSesion && tareas.length) {
+        const mejor = encontrarMejorTarea(tituloSesion, tareas);
+        if (mejor) sel.value = mejor.gid;
+      }
+
+      check();
+    });
+  }
+
+  const PALABRAS_IGNORADAS = new Set([
+    'de','del','la','el','los','las','y','o','a','en','con','para','por','un','una',
+    'sesion','sesion','reunion','reunion','formacion','formacion','revision','revision',
+    'the','of','and','to'
+  ]);
+
+  // Calcula similitud entre el título de sesión y las tareas por palabras compartidas
+  function encontrarMejorTarea(titulo, tareas) {
+    const palabrasTitulo = normalizar(titulo).split(/\s+/).filter(p => p.length >= 1 && !PALABRAS_IGNORADAS.has(p));
+    if (!palabrasTitulo.length) return null;
+
+    let mejor = null;
+    let mejorScore = 0;
+
+    for (const t of tareas) {
+      const palabrasTarea = normalizar(t.name).split(/\s+/).filter(p => p.length >= 1 && !PALABRAS_IGNORADAS.has(p));
+      if (!palabrasTarea.length) continue;
+
+      // Contar palabras compartidas (en cualquier dirección)
+      let coincidencias = 0;
+      for (const pt of palabrasTitulo) {
+        if (palabrasTarea.some(pta => pta === pt || pta.includes(pt) || pt.includes(pta))) coincidencias++;
+      }
+      if (coincidencias === 0) continue;
+
+      const scoreTitulo = coincidencias / palabrasTitulo.length;
+      const scoreTarea = coincidencias / palabrasTarea.length;
+      const score = Math.max(scoreTitulo, scoreTarea);
+
+      if (score > mejorScore) {
+        mejorScore = score;
+        mejor = t;
+      }
+    }
+    // Sugerir si supera 50% de coincidencia en alguna dirección
+    return mejorScore >= 0.5 ? mejor : null;
+  }
+
+  function normalizar(texto) {
+    return texto.toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '') // quitar tildes
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+  }
+
+  // Selección de implementador por chips: fija el valor (input oculto que el
+  // resto del código sigue leyendo), marca el chip activo y carga sus sesiones.
+  function seleccionarImplementador(persona) {
+    document.getElementById('selector-persona').value = persona;
+    document.querySelectorAll('#impl-tags .impl-tag').forEach(b => b.classList.toggle('activo', b.dataset.impl === persona));
+    cambiarImplementador();
+  }
+
+  // Mismos chips de implementador para Dashboard y Vista cliente.
+  function seleccionarImplDash(persona) {
+    document.getElementById('dash-implementador').value = persona;
+    document.querySelectorAll('#dash-impl-tags .impl-tag').forEach(b => b.classList.toggle('activo', b.dataset.impl === persona));
+    cargarDashboard();
+  }
+  function seleccionarImplCli(persona) {
+    document.getElementById('cli-implementador').value = persona;
+    document.querySelectorAll('#cli-impl-tags .impl-tag').forEach(b => b.classList.toggle('activo', b.dataset.impl === persona));
+    cargarCliPortfolio();
+  }
+
+  function cambiarImplementador() {
+    const persona = document.getElementById('selector-persona').value;
+    // Seleccionar automáticamente el portfolio correspondiente
+    if (persona) {
+      const portSel = document.getElementById('portfolio');
+      portSel.value = persona;
+      cargarProyectos();
+    }
+    cargarListadoSesiones();
+  }
+
+  async function cargarListadoSesiones() {
+    const persona = document.getElementById('selector-persona').value;
+    const sel = document.getElementById('selector-sesion');
+    if (!persona) {
+      sel.innerHTML = '<option value="">— Selecciona primero una persona —</option>';
+      return;
+    }
+    sel.innerHTML = '<option>⏳ Cargando...</option>';
+    try {
+      const r = await fetch('/api/recent-sessions?person=' + persona);
+      const data = await r.json();
+      if (data.error) {
+        sel.innerHTML = r.status === 401
+          ? '<option value="">⚠️ Conecta primero con Google</option>'
+          : '<option>❌ ' + data.error + '</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="">— Selecciona una sesión —</option>';
+      cacheSesiones = {};
+      data.forEach(s => {
+        cacheSesiones[s.id] = s;
+        const o = document.createElement('option');
+        o.value = s.id;
+        const marca = s.tieneNotas ? '' : ' ⚠️ sin notas (posible no show)';
+        o.textContent = `${s.fecha} — ${s.titulo}${marca}`;
+        sel.appendChild(o);
+      });
+      estado(`✓ ${data.length} sesiones cargadas`);
+    } catch (e) { estado('❌ ' + e.message, true); }
+  }
+
+  let sesionActualDocId = null;
+  let cacheSesiones = {};
+  async function cargarSesion(idSesion) {
+    if (!idSesion) return;
+    const sesionCache = cacheSesiones[idSesion];
+
+    // Si la sesión no tiene notas (posible no show), rellenar solo lo básico
+    if (sesionCache && !sesionCache.tieneNotas) {
+      sesionActualDocId = null;
+      document.getElementById('notas').value = '';
+      document.getElementById('titulo').value = sesionCache.titulo;
+      document.getElementById('fecha').value = new Date(sesionCache.fechaISO).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+      document.getElementById('correos-invitados').value = sesionCache.correosInvitados || '';
+      document.getElementById('participantes').value = '';
+      document.getElementById('doc-info').innerHTML = '<div class="info-box" style="background: #FFE4A1; color: #8B4513;">⚠️ Sesión sin notas — probable No Show. Rellena los campos manualmente.</div>';
+      // Marcar No Show automáticamente
+      document.querySelector('input[name="asistencia"][value="No Show"]').checked = true;
+      // Auto-detectar portfolio según el implementador ya seleccionado
+      const persona = document.getElementById('selector-persona').value;
+      if (persona) {
+        const portSel = document.getElementById('portfolio');
+        portSel.value = persona;
+        cargarProyectos();
+      }
+      estado('✓ Sesión sin notas cargada — marca No Show y guarda');
+      return;
+    }
+
+    // Sesión normal con notas
+    const docId = sesionCache?.docId || idSesion;
+    sesionActualDocId = docId;
+    estado('⏳ Cargando sesión...');
+    try {
+      const r = await fetch('/api/notes/' + docId);
+      const data = await r.json();
+      if (data.error) { estado('❌ ' + data.error, true); return; }
+      document.getElementById('notas').value = data.notas;
+      document.getElementById('titulo').value = data.titulo;
+      document.getElementById('fecha').value = data.fecha;
+            document.getElementById('correos-invitados').value = data.correosInvitados || '';
+      document.getElementById('participantes').value = data.participantes || '';
+      document.getElementById('doc-info').innerHTML = `<div class="info-box">📄 <strong>${data.docName}</strong></div>`;
+
+      // Auto-detectar portfolio según los participantes (Mario / Hugo / Carlos)
+      const participantesLower = (data.participantes || '').toLowerCase();
+      let portfolioDetectado = null;
+      if (/\bmario\b/i.test(participantesLower)) portfolioDetectado = 'mario';
+      else if (/\bcarlos\b/i.test(participantesLower)) portfolioDetectado = 'carlos';
+      else if (/\bhugo\b/i.test(participantesLower)) portfolioDetectado = 'hugo';
+
+      if (portfolioDetectado) {
+        const portSel = document.getElementById('portfolio');
+        portSel.value = portfolioDetectado;
+        cargarProyectos(); // esta función ya hace match del proyecto automáticamente
+      } else {
+        // Fallback: si ya hay portfolio seleccionado, intentar match con proyectos cargados
+        const t = data.titulo.toLowerCase();
+        const match = proyectos.find(p => t.includes(p.name.toLowerCase().substring(0, 10)) || p.name.toLowerCase().includes(t.substring(0, 10)));
+        if (match) { document.getElementById('proyecto').value = match.gid; cargarTareas(); }
+      }
+      estado('✓ Notas cargadas');
+    } catch (e) { estado('❌ ' + e.message, true); }
+  }
+
+  async function generar() {
+    const notas = document.getElementById('notas').value;
+    if (!notas.trim()) { estado('⚠️ Carga o pega primero las notas', true); return; }
+
+    const btn = document.getElementById('btn-gen');
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Generando...';
+
+    try {
+      const r = await fetch('/api/summarize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notas, titulo: document.getElementById('titulo').value,
+          fecha: document.getElementById('fecha').value,
+          participantes: document.getElementById('participantes').value,
+          correosInvitados: document.getElementById('correos-invitados').value
+        })
+      });
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      datosResumen = data.datos;
+      renderizarEmail(data.datos);
+      estado('✓ Resumen generado');
+      check();
+    } catch (e) {
+      estado('❌ ' + e.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = textoOriginal;
+    }
+  }
+
+  function renderizarEmail(d) {
+    // Nombre del implementador para el saludo/firma del email. El panel lo usan
+    // Mario, Carlos y Hugo: no hardcodear un nombre concreto.
+    const IMPL_NOMBRES = { mario: 'Mario', carlos: 'Carlos', hugo: 'Hugo' };
+    const implSel = (document.getElementById('selector-persona') || {}).value || '';
+    const nombreImpl = IMPL_NOMBRES[implSel] || '';
+    const saludo = nombreImpl ? `Buenas, ${nombreImpl} al habla.` : 'Buenas.';
+    const firma = nombreImpl ? `Un saludo, ${nombreImpl}` : 'Un saludo';
+
+    const tarjeta = (item, tag) => `
+      <div style="border: 1px solid #E1E4ED; padding: 14px 18px; border-radius: 10px; margin-top: 10px; background: #fff;">
+        <h3 style="margin: 0 0 6px; font-size: 14px; color: #161A3D; font-family: Poppins, Arial, sans-serif; font-weight: 600;">${item.titulo}</h3>
+        <p style="margin: 0; color: #5A6075; font-size: 13px; line-height: 1.55; font-family: Poppins, Arial, sans-serif;">${item.descripcion}</p>
+      </div>`;
+
+    const tag = (texto, color) => `
+      <span style="background: ${color}; color: white; font-size: 10px; padding: 5px 11px; border-radius: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.8px; font-family: Poppins, Arial, sans-serif;">${texto}</span>`;
+
+    const seccion = (etiqueta, color, titulo, items) => {
+      if (!items || !items.length) return '';
+      return `
+        <div style="margin-top: 28px;">
+          ${tag(etiqueta, color)}
+          <h2 style="margin: 10px 0 4px; font-size: 17px; color: #161A3D; font-family: Poppins, Arial, sans-serif; font-weight: 600;">${titulo}</h2>
+          ${items.map(i => tarjeta(i)).join('')}
+        </div>`;
+    };
+
+    const html = `
+      <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 100%; color: #161A3D; background: #fff;">
+        <div style="background: linear-gradient(135deg, #161A3D 0%, #232851 100%); padding: 28px 28px 24px; color: white;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <span style="background: #F95A5C; color: white; width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;">y</span>
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Resumen de sesión</span>
+          </div>
+          <h1 style="margin: 0; font-size: 22px; font-weight: 600; line-height: 1.3;">${d.titulo}</h1>
+          <p style="margin: 8px 0 0; opacity: 0.75; font-size: 13px;">${d.fecha}</p>
+        </div>
+
+        <div style="padding: 20px 28px 8px;">
+          <div style="background: #F7B6B6; padding: 16px 20px; border-left: 4px solid #F95A5C; border-radius: 8px;">
+            <p style="margin: 0; color: #161A3D; font-size: 14px; line-height: 1.6;"><strong>${saludo}</strong></p>
+            <p style="margin: 8px 0 0; color: #161A3D; font-size: 14px; line-height: 1.6;">${d.intro}</p>
+          </div>
+
+                    <div style="margin-top: 24px; background: #F5F6FA; padding: 16px 20px; border-radius: 8px;">
+            <p style="margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #5A6075; font-weight: 600;">Información general</p>
+            <p style="margin: 0; font-size: 13px; line-height: 1.7;">
+              ${d.correos_invitados ? `<strong>Correos invitados:</strong> ${d.correos_invitados}<br>` : ''}
+              ${d.participantes ? `<strong>Participantes:</strong> ${d.participantes}<br>` : ''}
+              <strong>Objetivo:</strong> ${d.objetivo}
+            </p>
+          </div>
+
+                    ${seccion('Temas y puntos clave', '#F95A5C', 'Lo que abordamos en la sesión', [...(d.temas_discutidos || []), ...(d.puntos_importantes || [])])}
+          ${seccion('Tareas pendientes', '#161A3D', 'Acciones a realizar', d.tareas_pendientes)}
+        </div>
+
+        ${d.proxima_sesion ? `
+          <div style="margin: 24px 28px 0; background: linear-gradient(135deg, #161A3D 0%, #232851 100%); padding: 18px 24px; border-radius: 10px; color: white;">
+            <p style="margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.7;">Próxima sesión</p>
+            <p style="margin: 0; font-size: 14px; font-weight: 500;">${d.proxima_sesion}</p>
+          </div>` : ''}
+
+        <div style="padding: 24px 28px; text-align: center;">
+          <p style="margin: 0; font-size: 13px; color: #5A6075;">Cualquier cosa estamos en contacto.</p>
+          <p style="margin: 8px 0 0; font-size: 14px; font-weight: 600; color: #161A3D;">${firma}</p>
+        </div>
+      </div>`;
+
+    const div = document.getElementById('resumen');
+    div.innerHTML = html;
+    div.contentEditable = 'true';
+  }
+
+  async function guardar() {
+    const taskGid = document.getElementById('tarea').value;
+    if (!taskGid) { estado('⚠️ Selecciona una tarea', true); return; }
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Guardando...';
+    try {
+      await fetch('/api/asana-task/' + taskGid, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumen: document.getElementById('resumen').innerText,
+          youtubeUrl: document.getElementById('youtube').value,
+          asistencia: document.querySelector('input[name="asistencia"]:checked').value,
+          duracion: document.getElementById('duracion').value,
+          fecha: document.getElementById('fecha').value
+        })
+      });
+      estado('✓ Guardado en Asana');
+    } catch (e) { estado('❌ ' + e.message, true); }
+    finally { btn.disabled = false; btn.textContent = '💾 Guardar en Asana'; check(); }
+  }
+
+  async function copiar() {
+    const div = document.getElementById('resumen');
+    if (!datosResumen) { estado('⚠️ Genera primero el resumen', true); return; }
+    try {
+      const html = div.innerHTML;
+      const texto = div.innerText;
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([texto], { type: 'text/plain' })
+        })
+      ]);
+      estado('✓ Copiado con formato — pégalo en Gmail');
+    } catch (e) { estado('❌ ' + e.message, true); }
+  }
+
+  function check() {
+    const ok = datosResumen && document.getElementById('tarea').value;
+    document.getElementById('btn-save').disabled = !ok;
+  }
+
+  function estado(msg, err) {
+    const d = document.getElementById('estado');
+    d.textContent = msg; d.className = 'estado' + (err ? ' error' : '');
+    setTimeout(() => d.textContent = '', 4000);
+  }
+
+  // ══════════════ NAVEGACIÓN ENTRE VISTAS ══════════════
+  // Vistas que aún muestran "Próximamente" (sin backend). Vacío: Vista cliente y
+  // Dashboard ya tienen sus webhooks n8n (panel/cliente, panel/dashboard-general).
+  // Añadir una clave aquí si alguna vista vuelve a quedarse sin backend.
+  const VISTAS_PROXIMAMENTE = {};
+
+  function cambiarVista(nombre) {
+    const esProx = !!VISTAS_PROXIMAMENTE[nombre];
+    ['panel', 'clientes', 'dashboard'].forEach(v => {
+      const el = document.getElementById('vista-' + v);
+      if (el) el.style.display = (v === nombre && !esProx) ? 'block' : 'none';
+    });
+    document.getElementById('vista-proximamente').style.display = esProx ? 'block' : 'none';
+    if (esProx) {
+      document.getElementById('proximamente-label').textContent =
+        `La vista «${VISTAS_PROXIMAMENTE[nombre]}» estará disponible pronto.`;
+    }
+    // Estado activo de las píldoras del selector de vista.
+    document.querySelectorAll('.panel-viewsel .vs-tab').forEach(b =>
+      b.classList.toggle('activo', b.dataset.view === nombre));
+  }
+
+  // ══════════════ DASHBOARD ══════════════
+  async function cargarDashboard() {
+    const impl = document.getElementById('dash-implementador').value;
+    const cont = document.getElementById('dash-contenido');
+    if (!impl) { cont.innerHTML = '<div style="padding: 40px; text-align: center; color: #5A6075;">Selecciona un implementador</div>'; return; }
+    cont.innerHTML = '<div style="padding: 40px; text-align: center; color: #5A6075;">⏳ Calculando datos de proyectos activos... (puede tardar unos segundos)</div>';
+    try {
+      const r = await fetch('/api/dashboard-general?implementador=' + impl);
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      renderDashboard(data);
+    } catch (e) {
+      cont.innerHTML = `<div style="padding: 20px; color: #d32f2f;">❌ ${e.message}</div>`;
+    }
+  }
+
+  let dashProyectosData = [];
+  let dashDataActual = null;
+  let dashVistaActual = 'listado';
+
+  function cambiarVistaDashboard(modo) {
+    dashVistaActual = modo;
+    document.querySelectorAll('.toggle-vista button').forEach(b => b.classList.toggle('activo', b.dataset.modo === modo));
+    if (dashDataActual) renderDashboard(dashDataActual);
+  }
+
+  function renderDashboard(d) {
+    dashDataActual = d;
+    const cont = document.getElementById('dash-contenido');
+    const proyectos = d.proyectos || [];
+    dashProyectosData = proyectos;
+
+    const header = `
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+        <div class="metric-card"><p class="metric-label">Proyectos activos</p><p class="metric-value">${d.totalProyectos}</p></div>
+        <div class="metric-card"><p class="metric-label">Sesiones pendientes</p><p class="metric-value" style="color: #F95A5C;">${d.totalPendientes}</p></div>
+        <div class="metric-card"><p class="metric-label">Agendadas esta semana</p><p class="metric-value" style="color: #1B8FFD;">${d.totalAgendadas}</p></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0 12px;">
+        <p style="margin: 0; font-size: 11px; color: #F95A5C; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; border-left: 3px solid #F95A5C; padding-left: 10px;">Proyectos activos</p>
+        <div class="toggle-vista">
+          <button data-modo="listado" class="${dashVistaActual === 'listado' ? 'activo' : ''}" onclick="cambiarVistaDashboard('listado')">📋 Listado</button>
+          <button data-modo="grafica" class="${dashVistaActual === 'grafica' ? 'activo' : ''}" onclick="cambiarVistaDashboard('grafica')">📊 Gráfica</button>
+        </div>
+      </div>
+    `;
+
+    if (dashVistaActual === 'grafica') {
+      cont.innerHTML = header + renderGrafica(proyectos);
+      return;
+    }
+
+    const maxValor = Math.max(1, ...proyectos.map(p => Math.max(p.pendientes, p.agendadas)));
+
+    const barrasHTML = proyectos.map((p, idx) => {
+      const pctPend = (p.pendientes / maxValor) * 100;
+      const pctAgend = (p.agendadas / maxValor) * 100;
+      return `
+        <div style="background: #F5F6FA; padding: 14px; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 13px; font-weight: 600; color: #161A3D;">${p.name}</span>
+            <span style="display: flex; gap: 6px;">
+              ${p.agendadas > 0 ? `<span onclick="verAgendadasProyecto(${idx})" style="background: #1B8FFD; color: white; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; cursor: pointer;" title="Ver sesiones agendadas">📅 ${p.agendadas}</span>` : ''}
+              ${p.pendientes > 0 ? `<span onclick="verPendientesProyecto(${idx})" style="background: #F95A5C; color: white; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; cursor: pointer;" title="Ver sesiones pendientes">⏳ ${p.pendientes}</span>` : ''}
+            </span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 10px; color: #5A6075; min-width: 75px; text-transform: uppercase; letter-spacing: 0.4px;">Pendientes</span>
+              <div style="flex: 1; background: white; border-radius: 4px; height: 10px; overflow: hidden;">
+                <div style="background: #F95A5C; width: ${pctPend}%; height: 100%; transition: width 0.4s;"></div>
+              </div>
+              <span style="font-size: 11px; color: #5A6075; min-width: 24px; text-align: right; font-weight: 600;">${p.pendientes}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 10px; color: #5A6075; min-width: 75px; text-transform: uppercase; letter-spacing: 0.4px;">Esta semana</span>
+              <div style="flex: 1; background: white; border-radius: 4px; height: 10px; overflow: hidden;">
+                <div style="background: #1B8FFD; width: ${pctAgend}%; height: 100%; transition: width 0.4s;"></div>
+              </div>
+              <span style="font-size: 11px; color: #5A6075; min-width: 24px; text-align: right; font-weight: 600;">${p.agendadas}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    cont.innerHTML = header + `
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${barrasHTML || '<div style="padding: 20px; text-align: center; color: #5A6075; font-size: 13px;">No hay proyectos activos</div>'}
+      </div>
+    `;
+  }
+
+  function renderGrafica(proyectos) {
+    if (!proyectos.length) {
+      return '<div style="padding: 40px; text-align: center; color: #5A6075; font-size: 13px;">No hay proyectos activos</div>';
+    }
+    const maxValor = Math.max(1, ...proyectos.map(p => Math.max(p.pendientes, p.agendadas)));
+    const altura = 220;
+
+    const columnas = proyectos.map((p, idx) => {
+      const altPend = Math.max((p.pendientes / maxValor) * altura, p.pendientes > 0 ? 4 : 0);
+      const altAgend = Math.max((p.agendadas / maxValor) * altura, p.agendadas > 0 ? 4 : 0);
+      return `
+        <div style="display: flex; flex-direction: column; align-items: center; min-width: 70px; flex: 1;">
+          <div style="display: flex; align-items: flex-end; gap: 3px; height: ${altura}px; padding: 0 4px;">
+            <div onclick="verPendientesProyecto(${idx})" title="Pendientes: ${p.pendientes}" style="width: 16px; height: ${altPend}px; background: #F95A5C; border-radius: 4px 4px 0 0; cursor: ${p.pendientes > 0 ? 'pointer' : 'default'}; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"></div>
+            <div onclick="verAgendadasProyecto(${idx})" title="Agendadas: ${p.agendadas}" style="width: 16px; height: ${altAgend}px; background: #1B8FFD; border-radius: 4px 4px 0 0; cursor: ${p.agendadas > 0 ? 'pointer' : 'default'}; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"></div>
+          </div>
+          <div style="border-top: 1px solid #E1E4ED; width: 100%; padding-top: 6px;">
+            <p style="margin: 0; font-size: 10px; color: #161A3D; font-weight: 600; text-align: center; line-height: 1.3; word-break: break-word; min-height: 28px;">${p.name}</p>
+            <p style="margin: 4px 0 0; font-size: 9px; text-align: center; color: #5A6075;">
+              <span style="color: #F95A5C; font-weight: 700;">${p.pendientes}</span> / <span style="color: #1B8FFD; font-weight: 700;">${p.agendadas}</span>
+            </p>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div style="display: flex; gap: 14px; margin-bottom: 12px; font-size: 11px; color: #5A6075;">
+        <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: #F95A5C; border-radius: 3px;"></span>Pendientes</span>
+        <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: #1B8FFD; border-radius: 3px;"></span>Esta semana</span>
+      </div>
+      <div style="overflow-x: auto; padding-bottom: 8px;">
+        <div style="display: flex; gap: 2px; min-width: 100%;">
+          ${columnas}
+        </div>
+      </div>
+    `;
+  }
+
+  function formatTiempo(min) {
+    if (!min) return '0h';
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    if (h && m) return `${h}h ${m}m`;
+    if (h) return `${h}h`;
+    return `${m}m`;
+  }
+
+  // ══════════════ VISTA CLIENTE ══════════════
+  let cliProyectos = [];
+
+  function cargarCliPortfolio() {
+    const impl = document.getElementById('cli-implementador').value;
+    const sel = document.getElementById('cli-proyecto');
+    if (!impl) { sel.innerHTML = '<option value="">— Selecciona primero un implementador —</option>'; return; }
+    sel.innerHTML = '<option>⏳ Cargando...</option>';
+    fetch('/api/projects/' + impl).then(r => r.json()).then(data => {
+      cliProyectos = data;
+      sel.innerHTML = '<option value="">— Selecciona un cliente —</option>';
+      data.forEach(p => {
+        const o = document.createElement('option');
+        o.value = p.gid; o.textContent = p.name;
+        sel.appendChild(o);
+      });
+    });
+  }
+
+  function aplicarAtajo(tipo) {
+    inicializarFechasCliente();
+    const hoy = new Date();
+    let desde, hasta = hoy;
+    if (tipo === 'semana') {
+      // Lunes de esta semana
+      const dow = hoy.getDay() || 7;
+      desde = new Date(hoy);
+      desde.setDate(hoy.getDate() - dow + 1);
+    } else if (tipo === 'mes') {
+      desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    } else if (tipo === 'mes-anterior') {
+      desde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+      hasta = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+    } else if (tipo === '30dias') {
+      desde = new Date(hoy.getTime() - 30 * 86400000);
+    } else if (tipo === '90dias') {
+      desde = new Date(hoy.getTime() - 90 * 86400000);
+    } else if (tipo === 'todo') {
+      desde = new Date('2024-01-01');
+    }
+    const fmt = d => d.toISOString().substring(0, 10);
+    document.getElementById('cli-desde').value = fmt(desde);
+    document.getElementById('cli-hasta').value = fmt(hasta);
+    if (flatpickrCliente) flatpickrCliente.setDate([desde, hasta], false);
+    cargarVistaCliente();
+  }
+
+  let flatpickrCliente = null;
+  function inicializarFechasCliente() {
+    if (flatpickrCliente) return;
+    const hoy = new Date();
+    const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const fmt = d => d.toISOString().substring(0, 10);
+    document.getElementById('cli-desde').value = fmt(primerDia);
+    document.getElementById('cli-hasta').value = fmt(hoy);
+
+    flatpickrCliente = flatpickr('#cli-rango', {
+      mode: 'range',
+      dateFormat: 'd/m/Y',
+      locale: 'es',
+      defaultDate: [primerDia, hoy],
+      onClose: function(selectedDates) {
+        if (selectedDates.length === 2) {
+          document.getElementById('cli-desde').value = fmt(selectedDates[0]);
+          document.getElementById('cli-hasta').value = fmt(selectedDates[1]);
+          cargarVistaCliente();
+        }
+      }
+    });
+  }
+
+  async function cargarVistaCliente() {
+    inicializarFechasCliente();
+    const gid = document.getElementById('cli-proyecto').value;
+    const cont = document.getElementById('cli-contenido');
+    if (!gid) { cont.innerHTML = '<div style="padding: 40px; text-align: center; color: #5A6075;">Selecciona un cliente</div>'; return; }
+    const desde = document.getElementById('cli-desde').value;
+    const hasta = document.getElementById('cli-hasta').value;
+    const impl = document.getElementById('cli-implementador').value;
+    cont.innerHTML = '<div style="padding: 40px; text-align: center; color: #5A6075;">⏳ Cargando histórico...</div>';
+    try {
+      const r = await fetch(`/api/cliente/${gid}?desde=${desde}&hasta=${hasta}&implementador=${impl}`);
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      renderVistaCliente(data);
+    } catch (e) {
+      cont.innerHTML = `<div style="padding: 20px; color: #d32f2f;">❌ ${e.message}</div>`;
+    }
+  }
+
+  function renderVistaCliente(d) {
+    const cont = document.getElementById('cli-contenido');
+    const inicial = (d.nombre || '?').charAt(0).toUpperCase();
+    const progreso = d.totalTareas ? Math.round((d.completadas / d.totalTareas) * 100) : 0;
+
+    sesionesActuales = d.sesiones || [];
+    const sesionesHTML = (d.sesiones || []).map((s, idx) => {
+      const esShow = s.asistencia === 'Show';
+      const colorBorde = esShow ? '#1B8FFD' : '#F95A5C';
+      const fondo = esShow ? '#F5F6FA' : '#FCEBEB';
+      const youtubeLink = s.youtubeUrl
+        ? `<a href="${s.youtubeUrl}" target="_blank" onclick="event.stopPropagation()" style="color: #1B8FFD; font-size: 10px; text-decoration: none; padding: 2px 8px;">▶ Ver grabación</a>`
+        : '';
+      return `
+        <div onclick="verDetalleSesion(${idx})" style="display: flex; gap: 14px; padding: 14px; background: ${fondo}; border-radius: 8px; border-left: 3px solid ${colorBorde}; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.transform='translateX(2px)'" onmouseout="this.style.transform='translateX(0)'">
+          <div style="text-align: center; min-width: 60px;">
+            <p style="margin: 0; font-size: 11px; color: #5A6075; font-weight: 600;">${s.fechaCorta}</p>
+          </div>
+          <div style="flex: 1;">
+            <p style="margin: 0; font-size: 13px; font-weight: 600; color: #161A3D;">${s.titulo}</p>
+            <p style="margin: 4px 0 0; font-size: 12px; color: #5A6075; line-height: 1.5;">${s.preview || '<em>Sin notas</em>'}</p>
+            <div style="display: flex; gap: 6px; margin-top: 8px;">
+              ${s.duracion ? `<span style="background: white; border: 1px solid #E1E4ED; color: #5A6075; padding: 2px 8px; border-radius: 8px; font-size: 10px;">${s.duracion} min</span>` : ''}
+              <span style="background: ${colorBorde}; color: white; padding: 2px 8px; border-radius: 8px; font-size: 10px;">${esShow ? '✓ Show' : '✗ No Show'}</span>
+              ${youtubeLink}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const pendientesHTML = (d.pendientes || []).map(p => `
+      <div style="padding: 10px 14px; background: #F5F6FA; border-radius: 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+        <span style="flex: 1;">${p.name}</span>
+        ${p.estimado ? `<span style="background: white; border: 1px solid #E1E4ED; color: #5A6075; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap;">⏱ ${formatTiempo(p.estimado)}</span>` : ''}
+      </div>
+    `).join('');
+
+    cont.innerHTML = `
+      <div style="background: #161A3D; padding: 22px 24px; border-radius: 10px; color: white; display: flex; align-items: center; gap: 16px;">
+        <div style="width: 56px; height: 56px; background: #F95A5C; color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px;">${inicial}</div>
+        <div style="flex: 1;">
+          <p style="margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.7;">Cliente</p>
+          <h2 style="margin: 4px 0 0; font-size: 22px; font-weight: 600;">${d.nombre}</h2>
+        </div>
+        <div style="text-align: right;">
+          <p style="margin: 0; font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.8px;">Progreso</p>
+          <p style="margin: 4px 0 0; font-size: 22px; font-weight: 700; color: #F7B6B6;">${d.completadas}/${d.totalTareas}</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 16px;">
+        <div class="metric-card"><p class="metric-label">Sesiones</p><p class="metric-value">${d.totalSesiones}</p></div>
+        <div class="metric-card"><p class="metric-label">Horas totales</p><p class="metric-value">${formatTiempo(d.minutosTotales)}</p></div>
+        <div class="metric-card"><p class="metric-label">Asistencia</p><p class="metric-value" style="color: #1B8FFD;">${d.showRate}%</p></div>
+        <div class="metric-card metric-clickable" onclick="abrirPendientes()">
+          <p class="metric-label">Pendientes</p>
+          <p class="metric-value" style="color: #F95A5C;">${(d.pendientes || []).length}</p>
+          <p class="metric-sub" style="color: #F95A5C;">Click para ver →</p>
+        </div>
+        <div class="metric-card metric-clickable" onclick="abrirAgendadas()">
+          <p class="metric-label">Esta semana</p>
+          <p class="metric-value" style="color: #1B8FFD;">${d.agendadasEstaSemana || 0}</p>
+          <p class="metric-sub" style="color: #1B8FFD;">Click para ver →</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <p style="margin: 0 0 12px; font-size: 11px; color: #F95A5C; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; border-left: 3px solid #F95A5C; padding-left: 10px;">Historial de sesiones (${d.sesiones.length})</p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          ${sesionesHTML || '<div style="padding: 20px; text-align: center; color: #5A6075; font-size: 13px;">Sin sesiones registradas</div>'}
+        </div>
+      </div>
+
+    `;
+    pendientesActuales = d.pendientes || [];
+    pendientesHTMLActual = pendientesHTML;
+    eventosAgendadosActuales = d.eventosAgendados || [];
+  }
+
+  let pendientesActuales = [];
+  let pendientesHTMLActual = '';
+  let eventosAgendadosActuales = [];
+  let sesionesActuales = [];
+
+  function verDetalleSesion(idx) {
+    const s = sesionesActuales[idx];
+    if (!s) return;
+    const esShow = s.asistencia === 'Show';
+    const colorAsist = esShow ? '#1B8FFD' : '#F95A5C';
+
+    const resumenHTML = s.resumenCompleto
+      ? `<div style="white-space: pre-wrap; font-size: 13px; line-height: 1.6; background: #F5F6FA; padding: 14px; border-radius: 8px;">${s.resumenCompleto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`
+      : `<div style="padding: 14px; background: #F5F6FA; border-radius: 8px; color: #5A6075; font-style: italic; font-size: 13px;">Sin notas registradas</div>`;
+
+    const html = `
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div>
+          <p style="margin: 0; font-size: 11px; color: #5A6075; text-transform: uppercase; letter-spacing: 0.5px;">Título</p>
+          <p style="margin: 4px 0 0; font-size: 15px; font-weight: 600; color: #161A3D;">${s.titulo}</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+          <div style="background: ${esShow ? '#E8F0FE' : '#FCEBEB'}; padding: 10px 14px; border-radius: 8px;">
+            <p style="margin: 0; font-size: 10px; color: #5A6075; text-transform: uppercase; letter-spacing: 0.5px;">Asistencia</p>
+            <p style="margin: 4px 0 0; font-size: 16px; font-weight: 700; color: ${colorAsist};">${esShow ? '✓ Show' : '✗ No Show'}</p>
+          </div>
+          <div style="background: #F5F6FA; padding: 10px 14px; border-radius: 8px;">
+            <p style="margin: 0; font-size: 10px; color: #5A6075; text-transform: uppercase; letter-spacing: 0.5px;">Fecha</p>
+            <p style="margin: 4px 0 0; font-size: 13px; font-weight: 600; color: #161A3D;">${s.fechaCompleta || s.fechaCorta}</p>
+          </div>
+          <div style="background: #F5F6FA; padding: 10px 14px; border-radius: 8px;">
+            <p style="margin: 0; font-size: 10px; color: #5A6075; text-transform: uppercase; letter-spacing: 0.5px;">Tiempo estimado</p>
+            <p style="margin: 4px 0 0; font-size: 16px; font-weight: 700; color: #161A3D;">${s.estimado ? formatTiempo(s.estimado) : '—'}</p>
+          </div>
+          <div style="background: #F5F6FA; padding: 10px 14px; border-radius: 8px;">
+            <p style="margin: 0; font-size: 10px; color: #5A6075; text-transform: uppercase; letter-spacing: 0.5px;">Tiempo real</p>
+            <p style="margin: 4px 0 0; font-size: 16px; font-weight: 700; color: #161A3D;">${s.duracion ? formatTiempo(s.duracion) : '—'}</p>
+          </div>
+        </div>
+
+        ${s.youtubeUrl ? `
+          <div>
+            <p style="margin: 0 0 4px; font-size: 11px; color: #5A6075; text-transform: uppercase; letter-spacing: 0.5px;">Grabación</p>
+            <a href="${s.youtubeUrl}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; background: #1B8FFD; color: white; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600;">▶ Ver en YouTube</a>
+          </div>` : ''}
+
+        <div>
+          <p style="margin: 0 0 6px; font-size: 11px; color: #5A6075; text-transform: uppercase; letter-spacing: 0.5px;">Resumen</p>
+          ${resumenHTML}
+        </div>
+
+        ${s.asanaUrl ? `
+          <a href="${s.asanaUrl}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; color: #5A6075; font-size: 12px; text-decoration: none;">↗ Abrir en Asana</a>` : ''}
+      </div>`;
+
+    document.getElementById('modal-sesion-header').innerHTML = `${s.fechaCorta} · ${esShow ? 'Show' : 'No Show'}`;
+    document.getElementById('modal-sesion-lista').innerHTML = html;
+    document.getElementById('modal-sesion').style.display = 'flex';
+  }
+
+  function cerrarSesionDetalle() {
+    document.getElementById('modal-sesion').style.display = 'none';
+  }
+
+  function abrirPendientes() {
+    if (!pendientesActuales.length) { alert('No hay tareas pendientes con tiempo estimado.'); return; }
+    const totalMin = pendientesActuales.reduce((s, p) => s + (p.estimado || 0), 0);
+    document.getElementById('modal-pendientes-header').innerHTML = `${pendientesActuales.length} pendientes · ${formatTiempo(totalMin)} estimadas`;
+    document.getElementById('modal-pendientes-lista').innerHTML = pendientesHTMLActual;
+    document.getElementById('modal-pendientes').style.display = 'flex';
+  }
+
+  function cerrarPendientes() {
+    document.getElementById('modal-pendientes').style.display = 'none';
+  }
+
+  function abrirAgendadas() {
+    if (!eventosAgendadosActuales.length) { alert('No hay sesiones agendadas esta semana con este cliente.'); return; }
+    const html = eventosAgendadosActuales.map(e => `
+      <div style="padding: 10px 14px; background: #F5F6FA; border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+        <span style="color: #1B8FFD; font-weight: 600; font-size: 12px; min-width: 130px;">📅 ${e.fecha}</span>
+        <span style="font-size: 13px; flex: 1;">${e.titulo}</span>
+      </div>
+    `).join('');
+    document.getElementById('modal-agendadas-header').innerHTML = `${eventosAgendadosActuales.length} sesión(es) agendadas esta semana`;
+    document.getElementById('modal-agendadas-lista').innerHTML = html;
+    document.getElementById('modal-agendadas').style.display = 'flex';
+  }
+
+  function cerrarAgendadas() {
+    document.getElementById('modal-agendadas').style.display = 'none';
+  }
+
+  function verPendientesProyecto(idx) {
+    const p = dashProyectosData[idx];
+    if (!p || !p.pendientesList?.length) return;
+    const totalMin = p.pendientesList.reduce((s, x) => s + (x.estimado || 0), 0);
+    const html = p.pendientesList.map(t => `
+      <div style="padding: 10px 14px; background: #F5F6FA; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px;">
+        <span style="flex: 1;">${t.name}</span>
+        <span style="background: white; border: 1px solid #E1E4ED; color: #5A6075; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap;">⏱ ${formatTiempo(t.estimado)}</span>
+      </div>
+    `).join('');
+    document.getElementById('modal-pendientes-header').innerHTML = `${p.name} · ${p.pendientesList.length} pendientes · ${formatTiempo(totalMin)} estimadas`;
+    document.getElementById('modal-pendientes-lista').innerHTML = html;
+    document.getElementById('modal-pendientes').style.display = 'flex';
+  }
+
+  function verAgendadasProyecto(idx) {
+    const p = dashProyectosData[idx];
+    if (!p || !p.agendadasList?.length) return;
+    const html = p.agendadasList.map(e => `
+      <div style="padding: 10px 14px; background: #F5F6FA; border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+        <span style="color: #1B8FFD; font-weight: 600; font-size: 12px; min-width: 130px;">📅 ${e.fecha}</span>
+        <span style="font-size: 13px; flex: 1;">${e.titulo}</span>
+      </div>
+    `).join('');
+    document.getElementById('modal-agendadas-header').innerHTML = `${p.name} · ${p.agendadasList.length} sesión(es) esta semana`;
+    document.getElementById('modal-agendadas-lista').innerHTML = html;
+    document.getElementById('modal-agendadas').style.display = 'flex';
+  }
+</script>
+</body>
+</html>

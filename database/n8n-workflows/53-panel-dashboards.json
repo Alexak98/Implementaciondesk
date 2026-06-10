@@ -1,0 +1,160 @@
+{
+  "name": "53 - Yurest - Panel Dashboards",
+  "active": true,
+  "nodes": [
+    {
+      "id": "wh-dg",
+      "name": "WH DashGen",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "panel-dashboard-general",
+      "onError": "continueRegularOutput",
+      "parameters": { "httpMethod": "GET", "path": "panel/dashboard-general", "responseMode": "responseNode", "options": {} }
+    },
+    {
+      "id": "prep-dg",
+      "name": "Prep DG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": { "jsCode": "const q = $input.first().json.query || {};\nconst impl = String(q.implementador || '').toLowerCase();\nconst PORT = { mario:'1208210821231026', hugo:'1207904722398091', carlos:'1212391476899288' };\nconst CAL = { mario:'m.labrandero@yurest.com', carlos:'c.aparicio@yurest.com', hugo:'h.zalazar@yurest.com' };\nconst portGid = PORT[impl]; const calId = CAL[impl];\nif (!portGid || !calId) { throw new Error('Implementador no valido: ' + impl); }\nconst hoy = new Date();\nconst dow = hoy.getDay() || 7;\nconst lunes = new Date(hoy); lunes.setDate(hoy.getDate() - dow + 1); lunes.setHours(0,0,0,0);\nconst fin = new Date(lunes); fin.setDate(lunes.getDate() + 7);\nreturn [{ json: {\n  impl: impl,\n  portUrl: 'https://app.asana.com/api/1.0/portfolios/' + portGid + '/items',\n  calUrl: 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calId) + '/events',\n  timeMin: lunes.toISOString(), timeMax: fin.toISOString()\n} }];" }
+    },
+    {
+      "id": "get-cal",
+      "name": "GET Calendar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 0],
+      "onError": "continueRegularOutput",
+      "parameters": { "url": "={{ $json.calUrl }}", "authentication": "predefinedCredentialType", "nodeCredentialType": "googleCalendarOAuth2Api", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "timeMin", "value": "={{ $json.timeMin }}" }, { "name": "timeMax", "value": "={{ $json.timeMax }}" }, { "name": "singleEvents", "value": "true" }, { "name": "maxResults", "value": "200" }, { "name": "orderBy", "value": "startTime" }] }, "options": {} },
+      "credentials": { "googleCalendarOAuth2Api": { "id": "voS7o1gxJHDEpMjQ", "name": "Soporte Calendar" } }
+    },
+    {
+      "id": "get-port",
+      "name": "GET Portfolio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 0],
+      "onError": "continueRegularOutput",
+      "parameters": { "url": "={{ $('Prep DG').item.json.portUrl }}", "authentication": "predefinedCredentialType", "nodeCredentialType": "asanaApi", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "limit", "value": "100" }, { "name": "opt_fields", "value": "name,gid,current_status.color" }] }, "options": {} },
+      "credentials": { "asanaApi": { "id": "jSyNj1XObS6uARgK", "name": "Asana account 3" } }
+    },
+    {
+      "id": "proj-items",
+      "name": "Projects To Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 0],
+      "parameters": { "jsCode": "const data = $input.first().json;\nconst items = (data.data || []).filter(function(p){ return !(p.current_status && p.current_status.color === 'complete'); });\nif (!items.length) { return [{ json: { _empty: true } }]; }\nreturn items.map(function(p){ return { json: { gid: p.gid, name: p.name } }; });" }
+    },
+    {
+      "id": "get-tasks",
+      "name": "GET Project Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 0],
+      "onError": "continueRegularOutput",
+      "parameters": { "url": "=https://app.asana.com/api/1.0/projects/{{ $json.gid }}/tasks", "authentication": "predefinedCredentialType", "nodeCredentialType": "asanaApi", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "limit", "value": "100" }, { "name": "opt_fields", "value": "name,completed,custom_fields.gid,custom_fields.number_value,subtasks.name,subtasks.completed,subtasks.custom_fields.gid,subtasks.custom_fields.number_value" }] }, "options": {} },
+      "credentials": { "asanaApi": { "id": "jSyNj1XObS6uARgK", "name": "Asana account 3" } }
+    },
+    {
+      "id": "agg-dg",
+      "name": "Aggregate DG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 0],
+      "parameters": { "jsCode": "const proyectos = $('Projects To Items').all().map(function(x){return x.json;}).filter(function(p){return !p._empty;});\nconst taskItems = $input.all().map(function(x){return x.json;});\nconst calItem = $('GET Calendar').first();\nconst eventos = (calItem && calItem.json && calItem.json.items) ? calItem.json.items : [];\nconst EST = '1204618651223643';\nconst STOP = new Set(['el','la','los','las','de','del','y','o','a','en','con','por','para','un','una','al','santa','santo','san','sant','casa','bar','restaurant','restaurante','restaurantes','hotel','hoteles','grupo','grupos','cocina','cocinas','catering','cafe','cafeteria','pizzeria','pizza','burger','burgers','club','sociedad','sa','sl','slu','sas','proyecto','cliente','formacion','sesion','reunion','llamada','escalado','implementacion','seguimiento','onboarding','revision','revisar','central','centrales']);\nfunction norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\\s+/g,' ').trim(); }\nfunction palabras(n){ return norm(n).split(' ').filter(function(p){return p.length>=4 && !STOP.has(p);}); }\nfunction coincide(sum, pals){ if(!sum||!pals.length) return false; const ne=norm(sum); const c=pals.filter(function(p){return ne.includes(p);}).length; const minN = pals.length===1?1:Math.max(1, Math.ceil(pals.length/2)); return c>=minN; }\nfunction fechaEvt(evt){ const d=new Date((evt.start && (evt.start.dateTime||evt.start.date))||Date.now()); return d.toLocaleString('es-ES',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }\nconst resultados = proyectos.map(function(p, i){\n  const resp = taskItems[i] || {};\n  const tasks = resp.data || [];\n  const pend = [];\n  for (const t of tasks) {\n    const est=(t.custom_fields||[]).find(function(f){return f.gid===EST;});\n    if (!t.completed && est && est.number_value>0) pend.push({name:t.name, estimado:est.number_value});\n    const subs = t.subtasks || [];\n    for (const sub of subs) {\n      const se=(sub.custom_fields||[]).find(function(f){return f.gid===EST;});\n      if (!sub.completed && se && se.number_value>0) pend.push({name: t.name+' ↳ '+sub.name, estimado: se.number_value});\n    }\n  }\n  const pals = palabras(p.name);\n  const agen = [];\n  for (const evt of eventos) { if (evt.summary && coincide(evt.summary, pals)) agen.push({titulo: evt.summary, fecha: fechaEvt(evt)}); }\n  return { gid:p.gid, name:p.name, pendientes:pend.length, agendadas:agen.length, pendientesList:pend, agendadasList:agen };\n});\nresultados.sort(function(a,b){ return (b.agendadas+b.pendientes)-(a.agendadas+a.pendientes); });\nconst totalAgendadas = resultados.reduce(function(s,r){return s+r.agendadas;},0);\nconst totalPendientes = resultados.reduce(function(s,r){return s+r.pendientes;},0);\nreturn [{ json: { result: { proyectos: resultados, totalProyectos: resultados.length, totalPendientes, totalAgendadas } } }];" }
+    },
+    {
+      "id": "resp-dg",
+      "name": "Respond DG",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1400, 0],
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json.result) }}", "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }, { "name": "Content-Type", "value": "application/json" }] } } }
+    },
+    {
+      "id": "wh-cli",
+      "name": "WH Cli",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 260],
+      "webhookId": "4587efe2-3877-48fa-9fdf-d3a4672a1bc5",
+      "onError": "continueRegularOutput",
+      "parameters": { "httpMethod": "GET", "path": "panel/cliente", "responseMode": "responseNode", "options": {} }
+    },
+    {
+      "id": "prep-cli",
+      "name": "Prep Cli",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 260],
+      "parameters": { "jsCode": "const q = $input.first().json.query || {};\nconst gid = String(q.gid || '');\nif (!gid) { throw new Error('Falta gid de proyecto'); }\nconst impl = String(q.implementador || '').toLowerCase();\nconst CAL = { mario:'m.labrandero@yurest.com', carlos:'c.aparicio@yurest.com', hugo:'h.zalazar@yurest.com' };\nconst calId = CAL[impl] || '';\nconst hoy = new Date();\nconst dow = hoy.getDay() || 7;\nconst lunes = new Date(hoy); lunes.setDate(hoy.getDate()-dow+1); lunes.setHours(0,0,0,0);\nconst fin = new Date(lunes); fin.setDate(lunes.getDate()+7);\nreturn [{ json: {\n  gid: gid, desde: q.desde || '', hasta: q.hasta || '', impl: impl, calId: calId,\n  projUrl: 'https://app.asana.com/api/1.0/projects/' + gid,\n  tasksUrl: 'https://app.asana.com/api/1.0/projects/' + gid + '/tasks',\n  calUrl: 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calId || 'primary') + '/events',\n  timeMin: lunes.toISOString(), timeMax: fin.toISOString()\n} }];" }
+    },
+    {
+      "id": "info-cli",
+      "name": "Project Info Cli",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 260],
+      "onError": "continueRegularOutput",
+      "parameters": { "url": "={{ $json.projUrl }}", "authentication": "predefinedCredentialType", "nodeCredentialType": "asanaApi", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "opt_fields", "value": "name" }] }, "options": {} },
+      "credentials": { "asanaApi": { "id": "jSyNj1XObS6uARgK", "name": "Asana account 3" } }
+    },
+    {
+      "id": "tasks-cli",
+      "name": "GET Tasks Cli",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 260],
+      "onError": "continueRegularOutput",
+      "parameters": { "url": "={{ $('Prep Cli').item.json.tasksUrl }}", "authentication": "predefinedCredentialType", "nodeCredentialType": "asanaApi", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "limit", "value": "100" }, { "name": "opt_fields", "value": "name,completed,completed_at,actual_time_minutes,notes,due_on,custom_fields.gid,custom_fields.enum_value.name,custom_fields.number_value,subtasks.name,subtasks.completed,subtasks.completed_at,subtasks.actual_time_minutes,subtasks.notes,subtasks.due_on,subtasks.custom_fields.gid,subtasks.custom_fields.enum_value.name,subtasks.custom_fields.number_value" }] }, "options": {} },
+      "credentials": { "asanaApi": { "id": "jSyNj1XObS6uARgK", "name": "Asana account 3" } }
+    },
+    {
+      "id": "cal-cli",
+      "name": "GET Calendar Cli",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 260],
+      "onError": "continueRegularOutput",
+      "parameters": { "url": "={{ $('Prep Cli').item.json.calUrl }}", "authentication": "predefinedCredentialType", "nodeCredentialType": "googleCalendarOAuth2Api", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "timeMin", "value": "={{ $('Prep Cli').item.json.timeMin }}" }, { "name": "timeMax", "value": "={{ $('Prep Cli').item.json.timeMax }}" }, { "name": "singleEvents", "value": "true" }, { "name": "maxResults", "value": "100" }, { "name": "orderBy", "value": "startTime" }] }, "options": {} },
+      "credentials": { "googleCalendarOAuth2Api": { "id": "voS7o1gxJHDEpMjQ", "name": "Soporte Calendar" } }
+    },
+    {
+      "id": "agg-cli",
+      "name": "Aggregate Cli",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 260],
+      "parameters": { "jsCode": "const SHOW='1211792508172622'; const EST='1204618651223643';\nconst prep=$('Prep Cli').item.json;\nconst pinfo=$('Project Info Cli').first();\nconst nombreCliente=(pinfo && pinfo.json && pinfo.json.data && pinfo.json.data.name) || 'Cliente';\nconst tr=$('GET Tasks Cli').first();\nconst top=(tr && tr.json && tr.json.data) ? tr.json.data : [];\nconst tareas=[];\nfor (const t of top){ tareas.push(t); for (const sub of (t.subtasks||[])){ tareas.push(Object.assign({}, sub, {esSubtarea:true, parentName:t.name})); } }\nconst desde=prep.desde ? new Date(prep.desde+'T00:00:00') : null;\nconst hasta=prep.hasta ? new Date(prep.hasta+'T23:59:59') : null;\nconst sesiones=[]; const pendientes=[]; let show=0, noShow=0, minutosTotales=0;\nfor (const t of tareas){\n  const sf=(t.custom_fields||[]).find(function(f){return f.gid===SHOW;});\n  const asistencia=(sf && sf.enum_value) ? sf.enum_value.name : null;\n  if (asistencia){\n    const fr=t.completed_at ? new Date(t.completed_at) : (t.due_on ? new Date(t.due_on) : null);\n    if (desde && fr && fr<desde) continue;\n    if (hasta && fr && fr>hasta) continue;\n    const fechaCorta=fr ? fr.toLocaleDateString('es-ES',{day:'2-digit',month:'short'}).toUpperCase() : 'S/F';\n    const notes=t.notes||'';\n    const ym=notes.match(/https?:\\/\\/(?:www\\.)?(?:youtu\\.be|youtube\\.com)\\/\\S+/);\n    const youtubeUrl=ym ? ym[0] : null;\n    const idx=notes.indexOf('\\n\\n');\n    const resumen=idx>-1 ? notes.substring(idx+2) : notes;\n    const preview=resumen.split('\\n').filter(function(l){return l.trim();}).slice(0,2).join(' ').substring(0,180);\n    const ef=(t.custom_fields||[]).find(function(f){return f.gid===EST;});\n    const estimado=(ef && ef.number_value) ? ef.number_value : 0;\n    const fechaCompleta=fr ? fr.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : 'Sin fecha';\n    sesiones.push({ titulo: t.esSubtarea ? (t.parentName+' ↳ '+t.name) : t.name, fechaCorta:fechaCorta, fechaCompleta:fechaCompleta, fechaRef: fr?fr.getTime():0, asistencia:asistencia, duracion: t.actual_time_minutes||0, estimado:estimado, youtubeUrl:youtubeUrl, preview:preview, resumenCompleto:notes, asanaUrl:'https://app.asana.com/0/'+prep.gid+'/'+t.gid });\n    if (asistencia==='Show') show++; else if (asistencia==='No Show') noShow++;\n    minutosTotales += t.actual_time_minutes||0;\n  } else if (!t.completed){\n    const ef=(t.custom_fields||[]).find(function(f){return f.gid===EST;});\n    if (ef && ef.number_value) pendientes.push({ name: t.esSubtarea ? (t.parentName+' ↳ '+t.name) : t.name, gid:t.gid, estimado:ef.number_value });\n  }\n}\nsesiones.sort(function(a,b){return b.fechaRef-a.fechaRef;});\nconst totalSesiones=show+noShow;\nconst showRate=totalSesiones ? Math.round((show/totalSesiones)*100) : 0;\nlet planificadas=0, ejecutadas=0;\nfor (const t of tareas){ const ef=(t.custom_fields||[]).find(function(f){return f.gid===EST;}); if (ef && ef.number_value>0) planificadas++; if (t.completed && t.actual_time_minutes>0) ejecutadas++; }\nconst calItem=$('GET Calendar Cli').first();\nconst eventos=(calItem && calItem.json && calItem.json.items) ? calItem.json.items : [];\nconst STOP=new Set(['el','la','los','las','de','del','y','o','a','en','con','por','para','un','una','al','santa','santo','san','sant','casa','bar','restaurant','restaurante','restaurantes','hotel','hoteles','grupo','grupos','cocina','cocinas','catering','cafe','cafeteria','pizzeria','pizza','burger','burgers','club','sociedad','sa','sl','slu','sas','proyecto','cliente','formacion','sesion','reunion','llamada','escalado','implementacion','seguimiento','onboarding','revision','revisar','central','centrales']);\nfunction norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\\s+/g,' ').trim(); }\nfunction palabras(n){ return norm(n).split(' ').filter(function(p){return p.length>=4 && !STOP.has(p);}); }\nfunction coincide(sum,pals){ if(!sum||!pals.length) return false; const ne=norm(sum); const c=pals.filter(function(p){return ne.includes(p);}).length; const minN=pals.length===1?1:Math.max(1,Math.ceil(pals.length/2)); return c>=minN; }\nfunction fechaEvt(evt){ const d=new Date((evt.start && (evt.start.dateTime||evt.start.date))||Date.now()); return d.toLocaleString('es-ES',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }\nconst pals=palabras(nombreCliente);\nlet agendadasEstaSemana=0; const eventosAgendados=[];\nfor (const evt of eventos){ if (evt.summary && coincide(evt.summary,pals)){ agendadasEstaSemana++; eventosAgendados.push({titulo:evt.summary, fecha:fechaEvt(evt)}); } }\nreturn [{ json: { result: { nombre:nombreCliente, totalTareas:planificadas, completadas:ejecutadas, totalSesiones:totalSesiones, minutosTotales:minutosTotales, showRate:showRate, sesiones:sesiones, pendientes:pendientes, agendadasEstaSemana:agendadasEstaSemana, eventosAgendados:eventosAgendados } } }];" }
+    },
+    {
+      "id": "resp-cli",
+      "name": "Respond Cli",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1200, 260],
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json.result) }}", "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }, { "name": "Content-Type", "value": "application/json" }] } } }
+    }
+  ],
+  "connections": {
+    "WH DashGen": { "main": [[{ "node": "Prep DG", "type": "main", "index": 0 }]] },
+    "Prep DG": { "main": [[{ "node": "GET Calendar", "type": "main", "index": 0 }]] },
+    "GET Calendar": { "main": [[{ "node": "GET Portfolio", "type": "main", "index": 0 }]] },
+    "GET Portfolio": { "main": [[{ "node": "Projects To Items", "type": "main", "index": 0 }]] },
+    "Projects To Items": { "main": [[{ "node": "GET Project Tasks", "type": "main", "index": 0 }]] },
+    "GET Project Tasks": { "main": [[{ "node": "Aggregate DG", "type": "main", "index": 0 }]] },
+    "Aggregate DG": { "main": [[{ "node": "Respond DG", "type": "main", "index": 0 }]] },
+    "WH Cli": { "main": [[{ "node": "Prep Cli", "type": "main", "index": 0 }]] },
+    "Prep Cli": { "main": [[{ "node": "Project Info Cli", "type": "main", "index": 0 }]] },
+    "Project Info Cli": { "main": [[{ "node": "GET Tasks Cli", "type": "main", "index": 0 }]] },
+    "GET Tasks Cli": { "main": [[{ "node": "GET Calendar Cli", "type": "main", "index": 0 }]] },
+    "GET Calendar Cli": { "main": [[{ "node": "Aggregate Cli", "type": "main", "index": 0 }]] },
+    "Aggregate Cli": { "main": [[{ "node": "Respond Cli", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": null,
+  "tags": []
+}

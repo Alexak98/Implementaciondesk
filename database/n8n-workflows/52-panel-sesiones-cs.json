@@ -1,0 +1,305 @@
+{
+  "name": "52 - Yurest - Panel Sesiones CS",
+  "active": true,
+  "nodes": [
+    {
+      "id": "wh-projects",
+      "name": "WH Projects",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "panel-projects",
+      "parameters": { "httpMethod": "GET", "path": "panel/projects", "responseMode": "responseNode", "options": {} },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "code-map-portfolio",
+      "name": "Map Portfolio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": { "jsCode": "const query = $input.first().json.query || {};\nconst key = String(query.key || '').toLowerCase();\nconst PORTFOLIOS = { mario: '1208210821231026', hugo: '1207904722398091', carlos: '1212391476899288' };\nconst gid = PORTFOLIOS[key];\nif (!gid) throw new Error('Portfolio desconocido: ' + key);\nreturn [{ json: { portfolioGid: gid } }];" }
+    },
+    {
+      "id": "http-portfolio-items",
+      "name": "GET Portfolio Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0],
+      "parameters": { "url": "=https://app.asana.com/api/1.0/portfolios/{{ $json.portfolioGid }}/items", "authentication": "predefinedCredentialType", "nodeCredentialType": "asanaApi", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "opt_fields", "value": "name,archived" }] }, "options": {} },
+      "credentials": { "asanaApi": { "id": "jSyNj1XObS6uARgK", "name": "Asana account 3" } }
+    },
+    {
+      "id": "code-format-projects",
+      "name": "Format Projects",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0],
+      "parameters": { "jsCode": "const data = $input.first().json;\nconst items = data.data || [];\nconst proyectos = items\n  .filter(p => !p.archived)\n  .map(p => ({ gid: p.gid, name: p.name }))\n  .sort((a, b) => a.name.localeCompare(b.name));\nreturn [{ json: { result: proyectos } }];" }
+    },
+    {
+      "id": "respond-projects",
+      "name": "Respond Projects",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, 0],
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json.result) }}", "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }, { "name": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" }, { "name": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }, { "name": "Content-Type", "value": "application/json" }] } } }
+    },
+    {
+      "id": "wh-tasks",
+      "name": "WH Tasks",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 240],
+      "webhookId": "panel-tasks",
+      "parameters": { "httpMethod": "GET", "path": "panel/tasks", "responseMode": "responseNode", "options": {} },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "code-extract-task-gid",
+      "name": "Extract Project Gid",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 240],
+      "parameters": { "jsCode": "const query = $input.first().json.query || {};\nconst gid = String(query.gid || '');\nif (!gid) throw new Error('Falta gid de proyecto');\nreturn [{ json: { gid } }];" }
+    },
+    {
+      "id": "http-project-tasks",
+      "name": "GET Project Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 240],
+      "parameters": { "url": "=https://app.asana.com/api/1.0/projects/{{ $json.gid }}/tasks", "authentication": "predefinedCredentialType", "nodeCredentialType": "asanaApi", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "opt_fields", "value": "gid,name,completed,num_subtasks" }] }, "options": {} },
+      "credentials": { "asanaApi": { "id": "jSyNj1XObS6uARgK", "name": "Asana account 3" } }
+    },
+    {
+      "id": "code-format-tasks",
+      "name": "Format Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 240],
+      "parameters": { "jsCode": "const data = $input.first().json;\nconst tasks = (data.data || [])\n  .filter(t => !t.completed)\n  .map(t => ({ gid: t.gid, name: t.name, esSubtarea: false }));\nreturn [{ json: { result: tasks } }];" }
+    },
+    {
+      "id": "respond-tasks",
+      "name": "Respond Tasks",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, 240],
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json.result) }}", "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }, { "name": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" }, { "name": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }, { "name": "Content-Type", "value": "application/json" }] } } }
+    },
+    {
+      "id": "wh-asana-task",
+      "name": "WH AsanaTask",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 480],
+      "webhookId": "a0b6df96-32e7-46f9-b25f-09d44f79e133",
+      "parameters": { "httpMethod": "PUT", "path": "panel/asana-task", "responseMode": "responseNode", "options": { "allowedOrigins": "*" } },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "code-build-update",
+      "name": "Build Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 480],
+      "parameters": { "jsCode": "const q = $input.first().json.query || {};\nconst b = $input.first().json.body || {};\nconst taskGid = String(q.gid || '');\nif (!taskGid) { throw new Error('Falta gid de tarea'); }\nconst resumen = b.resumen || '';\nconst youtubeUrl = b.youtubeUrl || '';\nconst asistencia = b.asistencia || 'Show';\nconst duracion = b.duracion || 0;\nconst fecha = b.fecha || '';\nconst SHOW_FIELD_GID = '1211792508172622';\nconst SHOW_OPTIONS = { 'Show': '1212358671286114', 'No Show': '1211792508172623' };\nconst meses = { enero:'01', febrero:'02', marzo:'03', abril:'04', mayo:'05', junio:'06', julio:'07', agosto:'08', septiembre:'09', octubre:'10', noviembre:'11', diciembre:'12' };\nlet fechaISO = null;\nconst partes = String(fecha).toLowerCase().split(' de ');\nif (partes.length === 3 && meses[partes[1].trim()]) { fechaISO = partes[2].trim() + '-' + meses[partes[1].trim()] + '-' + ('0' + partes[0].trim()).slice(-2); }\nconst NL = String.fromCharCode(10);\nconst linea = '──────────────────────────────';\nconst notas = '📹 Grabación: ' + (youtubeUrl || 'Pendiente') + NL + linea + NL + NL + resumen;\nconst data = { notes: notas, completed: true, custom_fields: { [SHOW_FIELD_GID]: SHOW_OPTIONS[asistencia] || SHOW_OPTIONS['Show'] } };\nif (fechaISO) { data.start_on = fechaISO; data.due_on = fechaISO; }\nconst minutos = parseInt(duracion, 10) || 0;\nconst timeBody = { data: { duration_minutes: minutos } };\nif (fechaISO) { timeBody.data.entered_on = fechaISO; }\nreturn [{ json: { taskGid, updateBody: { data: data }, timeBody, minutos } }];" }
+    },
+    {
+      "id": "http-put-task",
+      "name": "PUT Asana Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 480],
+      "parameters": { "method": "PUT", "url": "=https://app.asana.com/api/1.0/tasks/{{ $json.taskGid }}", "authentication": "predefinedCredentialType", "nodeCredentialType": "asanaApi", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify($json.updateBody) }}", "options": {} },
+      "credentials": { "asanaApi": { "id": "jSyNj1XObS6uARgK", "name": "Asana account 3" } }
+    },
+    {
+      "id": "http-time-entry",
+      "name": "POST Time Entry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 480],
+      "parameters": { "method": "POST", "url": "=https://app.asana.com/api/1.0/tasks/{{ $('Build Update').item.json.taskGid }}/time_tracking_entries", "authentication": "predefinedCredentialType", "nodeCredentialType": "asanaApi", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify($('Build Update').item.json.timeBody) }}", "options": {} },
+      "credentials": { "asanaApi": { "id": "jSyNj1XObS6uARgK", "name": "Asana account 3" } },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "respond-asana-task",
+      "name": "Respond AsanaTask",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, 480],
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify({ ok: true }) }}", "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }, { "name": "Content-Type", "value": "application/json" }] } } }
+    },
+    {
+      "id": "wh-summarize",
+      "name": "WH Summarize",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 720],
+      "webhookId": "5d8c2998-c5d1-41d0-874d-b7ad936f5c52",
+      "parameters": { "httpMethod": "POST", "path": "panel/summarize", "responseMode": "responseNode", "options": { "allowedOrigins": "*" } },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "code-build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 720],
+      "parameters": { "jsCode": "const b = $input.first().json.body || {};\nconst notas = b.notas || '';\nconst titulo = b.titulo || '';\nconst fecha = b.fecha || '';\nconst participantes = b.participantes || '';\nconst correos = b.correosInvitados || '';\nconst NL = String.fromCharCode(10);\nconst lineas = [\n  'Eres asistente de implementacion de software hostelero (Yurest).',\n  'Genera el cuerpo de un email de resumen de sesion en espanol a partir de las notas proporcionadas.',\n  '',\n  'Responde UNICAMENTE con un JSON valido con esta estructura exacta (sin markdown):',\n  '{',\n  '  \"intro\": \"Frase introductoria breve y concreta sobre lo que se trabajo\",',\n  '  \"titulo\": ' + JSON.stringify(titulo) + ',',\n  '  \"fecha\": ' + JSON.stringify(fecha) + ',',\n  '  \"participantes\": ' + JSON.stringify(participantes) + ',',\n  '  \"correos_invitados\": ' + JSON.stringify(correos) + ',',\n  '  \"objetivo\": \"Una frase clara con el objetivo principal de la sesion\",',\n  '  \"temas_discutidos\": [{\"titulo\": \"Nombre del tema\", \"descripcion\": \"Explicacion tecnica del punto\"}],',\n  '  \"puntos_importantes\": [{\"titulo\": \"Titulo breve\", \"descripcion\": \"Detalle del acuerdo\"}],',\n  '  \"tareas_pendientes\": [{\"titulo\": \"Titulo breve\", \"descripcion\": \"Accion pendiente SIN responsable\"}],',\n  '  \"proxima_sesion\": \"Tema, fecha y hora si se menciona; vacio si no hay info\",',\n  '  \"duracion_minutos\": 0',\n  '}',\n  'REGLAS:',\n  '- 3 a 7 elementos por seccion maximo.',\n  '- Se concreto y tecnico, usa nombres reales de modulos/productos.',\n  '- No inventes informacion que no este en las notas.',\n  '- En tareas_pendientes NUNCA incluyas nombres de responsables, solo la accion.',\n  '- Si una seccion no tiene info, devuelvela como array vacio [].',\n  '- duracion_minutos: extrae la duracion en minutos si aparece en las notas; si no, 0.',\n  '',\n  'NOTAS DE LA SESION:',\n  notas\n];\nconst prompt = lineas.join(NL);\nconst openaiBody = { model: 'gpt-4o', max_tokens: 3000, response_format: { type: 'json_object' }, messages: [{ role: 'user', content: prompt }] };\nreturn [{ json: { openaiBody } }];" }
+    },
+    {
+      "id": "http-openai",
+      "name": "OpenAI Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 720],
+      "parameters": { "method": "POST", "url": "https://api.openai.com/v1/chat/completions", "authentication": "predefinedCredentialType", "nodeCredentialType": "openAiApi", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify($json.openaiBody) }}", "options": {} },
+      "credentials": { "openAiApi": { "id": "w2doUpVdPofPaHNg", "name": "OpenAi account" } }
+    },
+    {
+      "id": "code-parse-summary",
+      "name": "Parse Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 720],
+      "parameters": { "jsCode": "const resp = $input.first().json;\nlet content = '';\nif (resp.choices && resp.choices[0] && resp.choices[0].message) { content = resp.choices[0].message.content || ''; }\nconst start = content.indexOf('{');\nconst end = content.lastIndexOf('}');\nif (start === -1 || end === -1) { throw new Error('OpenAI no devolvio JSON'); }\nconst datos = JSON.parse(content.slice(start, end + 1));\nreturn [{ json: { result: { datos: datos } } }];" }
+    },
+    {
+      "id": "respond-summarize",
+      "name": "Respond Summarize",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, 720],
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json.result) }}", "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }, { "name": "Content-Type", "value": "application/json" }] } } }
+    },
+    {
+      "id": "wh-recent",
+      "name": "WH Recent",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 960],
+      "webhookId": "467e4b7b-1ff2-4aec-af02-c1b37c6d8504",
+      "parameters": { "httpMethod": "GET", "path": "panel/recent-sessions", "responseMode": "responseNode", "options": {} },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "code-prep-calendar",
+      "name": "Prep Calendar Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 960],
+      "parameters": { "jsCode": "const q = $input.first().json.query || {};\nconst persona = String(q.person || 'mario').toLowerCase();\nconst CAL = { mario: 'm.labrandero@yurest.com', carlos: 'c.aparicio@yurest.com', hugo: 'h.zalazar@yurest.com' };\nconst calendarId = CAL[persona];\nif (!calendarId) { throw new Error('Persona no valida: ' + persona); }\nconst hoy = new Date();\nlet dl = 0; const limite = new Date(hoy);\nwhile (dl < 7) { limite.setDate(limite.getDate() - 1); const dow = limite.getDay(); if (dow !== 0 && dow !== 6) { dl++; } }\nlimite.setHours(0,0,0,0);\nconst apiUrl = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events';\nreturn [{ json: { apiUrl, emailOrg: calendarId, timeMin: limite.toISOString(), timeMax: hoy.toISOString() } }];" }
+    },
+    {
+      "id": "http-calendar",
+      "name": "GET Calendar Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 960],
+      "parameters": { "url": "={{ $json.apiUrl }}", "authentication": "predefinedCredentialType", "nodeCredentialType": "googleCalendarOAuth2Api", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "timeMin", "value": "={{ $json.timeMin }}" }, { "name": "timeMax", "value": "={{ $json.timeMax }}" }, { "name": "singleEvents", "value": "true" }, { "name": "maxResults", "value": "250" }, { "name": "orderBy", "value": "startTime" }] }, "options": {} },
+      "credentials": { "googleCalendarOAuth2Api": { "id": "voS7o1gxJHDEpMjQ", "name": "Soporte Calendar" } }
+    },
+    {
+      "id": "code-format-sessions",
+      "name": "Format Sessions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 960],
+      "parameters": { "jsCode": "const resp = $input.first().json;\nconst items = resp.items || [];\nconst emailOrg = String(($('Prep Calendar Query').item.json.emailOrg) || '').toLowerCase();\nconst SKIP = ['tareas indirectas','comida','out of office','fuera de oficina'];\nconst map = new Map();\nfor (const evt of items) {\n  const organizador = String((evt.organizer && evt.organizer.email) || '').toLowerCase();\n  const creador = String((evt.creator && evt.creator.email) || '').toLowerCase();\n  if (organizador !== emailOrg && creador !== emailOrg) { continue; }\n  if (!evt.summary) { continue; }\n  const low = evt.summary.toLowerCase();\n  if (SKIP.some(x => low.includes(x))) { continue; }\n  const fechaObj = new Date((evt.start && (evt.start.dateTime || evt.start.date)) || Date.now());\n  let titulo = evt.summary;\n  const ng = titulo.toLowerCase().lastIndexOf(' - notas de gemini');\n  if (ng !== -1) { titulo = titulo.slice(0, ng); }\n  const parts = titulo.split(' - ');\n  if (parts.length > 1) { const last = parts[parts.length - 1].trim(); const yr = last.slice(0,4); if (last.charAt(4) === '/' && yr >= '2000' && yr <= '2099') { parts.pop(); } titulo = parts.join(' - '); }\n  titulo = titulo.trim();\n  const correos = (evt.attendees || []).map(a => a.displayName || a.email).filter(Boolean).join(', ');\n  let docId = null;\n  if (evt.attachments) { for (const att of evt.attachments) { if (att.title && att.title.toLowerCase().includes('notas de gemini') && att.fileId) { docId = att.fileId; break; } } }\n  const clave = docId || ('evt_' + evt.id);\n  if (map.has(clave)) { continue; }\n  map.set(clave, { id: clave, docId: docId, name: titulo, titulo: titulo, correosInvitados: correos, tieneNotas: !!docId, fechaObj: fechaObj, fecha: fechaObj.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' }) });\n}\nconst todas = Array.from(map.values()).sort((a,b) => b.fechaObj - a.fechaObj);\nconst vistos = new Set();\nconst sesiones = [];\nfor (const s of todas) { const k = s.titulo + '__' + s.fecha; if (vistos.has(k)) { continue; } vistos.add(k); sesiones.push({ id: s.id, docId: s.docId, tieneNotas: s.tieneNotas, name: s.name, titulo: s.titulo, fecha: s.fecha, fechaISO: s.fechaObj.toISOString(), correosInvitados: s.correosInvitados }); }\nreturn [{ json: { result: sesiones } }];" }
+    },
+    {
+      "id": "respond-recent",
+      "name": "Respond Recent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, 960],
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json.result) }}", "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }, { "name": "Content-Type", "value": "application/json" }] } } }
+    },
+    {
+      "id": "wh-notes",
+      "name": "WH Notes",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 1200],
+      "webhookId": "f78f8d08-b702-4793-b2e1-a62f6e135bcd",
+      "parameters": { "httpMethod": "GET", "path": "panel/notes", "responseMode": "responseNode", "options": {} },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "code-extract-docid",
+      "name": "Extract DocId",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 1200],
+      "parameters": { "jsCode": "const q = $input.first().json.query || {};\nconst docId = String(q.docId || '');\nif (!docId) { throw new Error('Falta docId'); }\nconst base = 'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(docId);\nreturn [{ json: { docId, driveUrl: base, exportUrl: base + '/export' } }];" }
+    },
+    {
+      "id": "http-drive-meta",
+      "name": "GET Drive Meta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 1200],
+      "parameters": { "url": "={{ $json.driveUrl }}", "authentication": "predefinedCredentialType", "nodeCredentialType": "googleDriveOAuth2Api", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "fields", "value": "id,name,modifiedTime" }] }, "options": {} },
+      "credentials": { "googleDriveOAuth2Api": { "id": "mhJHxwOFo87L8Bzt", "name": "Soporte Drive" } }
+    },
+    {
+      "id": "http-docs-get",
+      "name": "GET Docs Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 1200],
+      "parameters": { "url": "={{ $('Extract DocId').item.json.exportUrl }}", "authentication": "predefinedCredentialType", "nodeCredentialType": "googleDriveOAuth2Api", "sendQuery": true, "queryParameters": { "parameters": [{ "name": "mimeType", "value": "text/plain" }] }, "options": { "response": { "response": { "responseFormat": "text" } } } },
+      "credentials": { "googleDriveOAuth2Api": { "id": "mhJHxwOFo87L8Bzt", "name": "Soporte Drive" } }
+    },
+    {
+      "id": "code-format-notes",
+      "name": "Format Notes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 1200],
+      "parameters": { "jsCode": "const docs = $input.first().json;\nlet contenido = '';\nif (typeof docs === 'string') { contenido = docs; } else if (docs && typeof docs.data === 'string') { contenido = docs.data; } else if (docs && docs.body) { contenido = docs.body; }\nconst drive = $('GET Drive Meta').item.json;\nconst docName = drive.name || '';\nlet titulo = docName;\nconst ng = titulo.toLowerCase().lastIndexOf(' - notas de gemini');\nif (ng !== -1) { titulo = titulo.slice(0, ng); }\nconst parts = titulo.split(' - ');\nif (parts.length > 1) { const last = parts[parts.length - 1].trim(); const yr = last.slice(0,4); if (last.charAt(4) === '/' && yr >= '2000' && yr <= '2099') { parts.pop(); } titulo = parts.join(' - '); }\ntitulo = titulo.trim();\nconst fechaObj = new Date(drive.modifiedTime || Date.now());\nconst result = { titulo: titulo, fecha: fechaObj.toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric' }), correosInvitados: '', participantes: '', notas: contenido, docName: docName, duracion: 0 };\nreturn [{ json: { result } }];" }
+    },
+    {
+      "id": "respond-notes",
+      "name": "Respond Notes",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 1200],
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json.result) }}", "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }, { "name": "Content-Type", "value": "application/json" }] } } }
+    }
+  ],
+  "connections": {
+    "WH Projects": { "main": [[{ "node": "Map Portfolio", "type": "main", "index": 0 }]] },
+    "Map Portfolio": { "main": [[{ "node": "GET Portfolio Items", "type": "main", "index": 0 }]] },
+    "GET Portfolio Items": { "main": [[{ "node": "Format Projects", "type": "main", "index": 0 }]] },
+    "Format Projects": { "main": [[{ "node": "Respond Projects", "type": "main", "index": 0 }]] },
+    "WH Tasks": { "main": [[{ "node": "Extract Project Gid", "type": "main", "index": 0 }]] },
+    "Extract Project Gid": { "main": [[{ "node": "GET Project Tasks", "type": "main", "index": 0 }]] },
+    "GET Project Tasks": { "main": [[{ "node": "Format Tasks", "type": "main", "index": 0 }]] },
+    "Format Tasks": { "main": [[{ "node": "Respond Tasks", "type": "main", "index": 0 }]] },
+    "WH AsanaTask": { "main": [[{ "node": "Build Update", "type": "main", "index": 0 }]] },
+    "Build Update": { "main": [[{ "node": "PUT Asana Task", "type": "main", "index": 0 }]] },
+    "PUT Asana Task": { "main": [[{ "node": "POST Time Entry", "type": "main", "index": 0 }]] },
+    "POST Time Entry": { "main": [[{ "node": "Respond AsanaTask", "type": "main", "index": 0 }]] },
+    "WH Summarize": { "main": [[{ "node": "Build Prompt", "type": "main", "index": 0 }]] },
+    "Build Prompt": { "main": [[{ "node": "OpenAI Chat", "type": "main", "index": 0 }]] },
+    "OpenAI Chat": { "main": [[{ "node": "Parse Summary", "type": "main", "index": 0 }]] },
+    "Parse Summary": { "main": [[{ "node": "Respond Summarize", "type": "main", "index": 0 }]] },
+    "WH Recent": { "main": [[{ "node": "Prep Calendar Query", "type": "main", "index": 0 }]] },
+    "Prep Calendar Query": { "main": [[{ "node": "GET Calendar Events", "type": "main", "index": 0 }]] },
+    "GET Calendar Events": { "main": [[{ "node": "Format Sessions", "type": "main", "index": 0 }]] },
+    "Format Sessions": { "main": [[{ "node": "Respond Recent", "type": "main", "index": 0 }]] },
+    "WH Notes": { "main": [[{ "node": "Extract DocId", "type": "main", "index": 0 }]] },
+    "Extract DocId": { "main": [[{ "node": "GET Drive Meta", "type": "main", "index": 0 }]] },
+    "GET Drive Meta": { "main": [[{ "node": "GET Docs Content", "type": "main", "index": 0 }]] },
+    "GET Docs Content": { "main": [[{ "node": "Format Notes", "type": "main", "index": 0 }]] },
+    "Format Notes": { "main": [[{ "node": "Respond Notes", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": null,
+  "tags": []
+}

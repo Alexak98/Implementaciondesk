@@ -1,0 +1,186 @@
+/* =============================================================================
+   Bw Modelica — tipografía corporativa Yurest
+   =============================================================================
+   Tres familias disponibles:
+     · "Bw Modelica"       (default — alternativa estilística estándar)
+     · "Bw Modelica SS01"  (alternativa estilística 1)
+     · "Bw Modelica SS02"  (alternativa estilística 2)
+
+   Mapeo de pesos (CSS font-weight):
+     Hairline   → 100
+     Thin       → 200
+     Light      → 300
+     Regular    → 400
+     Medium     → 500
+     Bold       → 700
+     ExtraBold  → 800
+     Black      → 900
+
+   Uso recomendado:
+     body { font-family: 'Bw Modelica', system-ui, -apple-system, sans-serif; }
+   ============================================================================= */
+
+/* ────────── Bw Modelica (default) ────────── */
+@font-face { font-family:'Bw Modelica'; font-style:normal; font-weight:100; font-display:swap;
+  src:url('fonts/BwModelica-Hairline.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:italic; font-weight:100; font-display:swap;
+  src:url('fonts/BwModelica-HairlineItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:normal; font-weight:200; font-display:swap;
+  src:url('fonts/BwModelica-Thin.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:italic; font-weight:200; font-display:swap;
+  src:url('fonts/BwModelica-ThinItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:normal; font-weight:300; font-display:swap;
+  src:url('fonts/BwModelica-Light.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:italic; font-weight:300; font-display:swap;
+  src:url('fonts/BwModelica-LightItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:normal; font-weight:400; font-display:swap;
+  src:url('fonts/BwModelica-Regular.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:italic; font-weight:400; font-display:swap;
+  src:url('fonts/BwModelica-RegularItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:normal; font-weight:500; font-display:swap;
+  src:url('fonts/BwModelica-Medium.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:italic; font-weight:500; font-display:swap;
+  src:url('fonts/BwModelica-MediumItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:normal; font-weight:700; font-display:swap;
+  src:url('fonts/BwModelica-Bold.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:italic; font-weight:700; font-display:swap;
+  src:url('fonts/BwModelica-BoldItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:normal; font-weight:800; font-display:swap;
+  src:url('fonts/BwModelica-ExtraBold.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:italic; font-weight:800; font-display:swap;
+  src:url('fonts/BwModelica-ExtraBoldItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:normal; font-weight:900; font-display:swap;
+  src:url('fonts/BwModelica-Black.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica'; font-style:italic; font-weight:900; font-display:swap;
+  src:url('fonts/BwModelica-BlackItalic.woff') format('woff'); }
+
+/* ────────── Bw Modelica SS01 ────────── */
+@font-face { font-family:'Bw Modelica SS01'; font-style:normal; font-weight:100; font-display:swap;
+  src:url('fonts/BwModelicaSS01-Hairline.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:italic; font-weight:100; font-display:swap;
+  src:url('fonts/BwModelicaSS01-HairlineItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:normal; font-weight:200; font-display:swap;
+  src:url('fonts/BwModelicaSS01-Thin.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:italic; font-weight:200; font-display:swap;
+  src:url('fonts/BwModelicaSS01-ThinItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:normal; font-weight:300; font-display:swap;
+  src:url('fonts/BwModelicaSS01-Light.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:italic; font-weight:300; font-display:swap;
+  src:url('fonts/BwModelicaSS01-LightItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:normal; font-weight:400; font-display:swap;
+  src:url('fonts/BwModelicaSS01-Regular.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:italic; font-weight:400; font-display:swap;
+  src:url('fonts/BwModelicaSS01-RegularItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:normal; font-weight:500; font-display:swap;
+  src:url('fonts/BwModelicaSS01-Medium.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:italic; font-weight:500; font-display:swap;
+  src:url('fonts/BwModelicaSS01-MediumItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:normal; font-weight:700; font-display:swap;
+  src:url('fonts/BwModelicaSS01-Bold.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:italic; font-weight:700; font-display:swap;
+  src:url('fonts/BwModelicaSS01-BoldItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:normal; font-weight:800; font-display:swap;
+  src:url('fonts/BwModelicaSS01-ExtraBold.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:italic; font-weight:800; font-display:swap;
+  src:url('fonts/BwModelicaSS01-ExtraBoldItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:normal; font-weight:900; font-display:swap;
+  src:url('fonts/BwModelicaSS01-Black.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS01'; font-style:italic; font-weight:900; font-display:swap;
+  src:url('fonts/BwModelicaSS01-BlackItalic.woff') format('woff'); }
+
+/* ────────── Bw Modelica SS02 ────────── */
+@font-face { font-family:'Bw Modelica SS02'; font-style:normal; font-weight:100; font-display:swap;
+  src:url('fonts/BwModelicaSS02-Hairline.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:italic; font-weight:100; font-display:swap;
+  src:url('fonts/BwModelicaSS02-HairlineItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:normal; font-weight:200; font-display:swap;
+  src:url('fonts/BwModelicaSS02-Thin.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:italic; font-weight:200; font-display:swap;
+  src:url('fonts/BwModelicaSS02-ThinItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:normal; font-weight:300; font-display:swap;
+  src:url('fonts/BwModelicaSS02-Light.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:italic; font-weight:300; font-display:swap;
+  src:url('fonts/BwModelicaSS02-LightItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:normal; font-weight:400; font-display:swap;
+  src:url('fonts/BwModelicaSS02-Regular.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:italic; font-weight:400; font-display:swap;
+  src:url('fonts/BwModelicaSS02-RegularItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:normal; font-weight:500; font-display:swap;
+  src:url('fonts/BwModelicaSS02-Medium.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:italic; font-weight:500; font-display:swap;
+  src:url('fonts/BwModelicaSS02-MediumItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:normal; font-weight:700; font-display:swap;
+  src:url('fonts/BwModelicaSS02-Bold.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:italic; font-weight:700; font-display:swap;
+  src:url('fonts/BwModelicaSS02-BoldItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:normal; font-weight:800; font-display:swap;
+  src:url('fonts/BwModelicaSS02-ExtraBold.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:italic; font-weight:800; font-display:swap;
+  src:url('fonts/BwModelicaSS02-ExtraBoldItalic.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:normal; font-weight:900; font-display:swap;
+  src:url('fonts/BwModelicaSS02-Black.woff') format('woff'); }
+@font-face { font-family:'Bw Modelica SS02'; font-style:italic; font-weight:900; font-display:swap;
+  src:url('fonts/BwModelicaSS02-BlackItalic.woff') format('woff'); }
+
+/* ────────── Poppins (tipografía secundaria · A.06) ──────────
+   El Manual de Identidad Corporativa 2026 (A.06) especifica Poppins para
+   redes sociales y aplicaciones digitales puntuales. NO sustituye a la
+   corporativa Bw Modelica SS01 — solo se invoca explícitamente en
+   componentes donde el manual la pide (tarjetas sociales, banners
+   promocionales digitales, copy de RRSS si se renderiza en el portal). */
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:100; font-display:swap;
+  src:url('fonts/Poppins-Thin.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:100; font-display:swap;
+  src:url('fonts/Poppins-ThinItalic.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:200; font-display:swap;
+  src:url('fonts/Poppins-ExtraLight.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:200; font-display:swap;
+  src:url('fonts/Poppins-ExtraLightItalic.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:300; font-display:swap;
+  src:url('fonts/Poppins-Light.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:300; font-display:swap;
+  src:url('fonts/Poppins-LightItalic.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:400; font-display:swap;
+  src:url('fonts/Poppins-Regular.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:400; font-display:swap;
+  src:url('fonts/Poppins-Italic.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:500; font-display:swap;
+  src:url('fonts/Poppins-Medium.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:500; font-display:swap;
+  src:url('fonts/Poppins-MediumItalic.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:600; font-display:swap;
+  src:url('fonts/Poppins-SemiBold.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:600; font-display:swap;
+  src:url('fonts/Poppins-SemiBoldItalic.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:700; font-display:swap;
+  src:url('fonts/Poppins-Bold.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:700; font-display:swap;
+  src:url('fonts/Poppins-BoldItalic.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:800; font-display:swap;
+  src:url('fonts/Poppins-ExtraBold.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:800; font-display:swap;
+  src:url('fonts/Poppins-ExtraBoldItalic.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:900; font-display:swap;
+  src:url('fonts/Poppins-Black.ttf') format('truetype'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:900; font-display:swap;
+  src:url('fonts/Poppins-BlackItalic.ttf') format('truetype'); }
+
+/* ────────── Aplicación global ──────────
+   Por defecto, todo el portal usa Bw Modelica SS01 con fallbacks de sistema.
+   El Manual de Identidad Corporativa 2026 (A.05) especifica explícitamente
+   la variante SS01 — las alternancias estilísticas de SS01 (sobre todo en
+   minúsculas como 'a', 'g') son las que el diseño corporativo aprueba.
+   Componentes específicos pueden sobreescribirlo si lo necesitan
+   (p.ej. los PDFs imprimibles que mantienen Helvetica, o componentes
+   sociales/RRSS que usan --font-display con Poppins). */
+:root {
+    --font-sans: 'Bw Modelica SS01', 'Bw Modelica', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    /* Tipografía secundaria para usos puntuales digitales (Manual A.06).
+       Úsala explícitamente con `font-family: var(--font-display)` en
+       componentes donde el manual la prescribe — NO la apliques globalmente. */
+    --font-display: 'Poppins', var(--font-sans);
+}
+
+html, body, button, input, textarea, select, optgroup {
+    font-family: var(--font-sans);
+}

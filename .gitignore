@@ -1,0 +1,15 @@
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
+
+# Secretos / entorno (nunca commitear)
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+token*.json
+
+# Dependencias
+node_modules/

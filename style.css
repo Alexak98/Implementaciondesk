@@ -1,0 +1,2064 @@
+/* Tipografía corporativa Bw Modelica (carga @font-face + variable --font-sans) */
+@import url('fonts.css');
+
+:root {
+    /* ───── Color corporativo (Manual de Identidad 2026 · sección A.04) ─────
+       Pantonas: Rojo 178C · Blanco 000C · Azul Marino 2768C.
+       --primary mantiene el valor histórico de tooling/legacy (var(--primary)),
+       que es perceptivamente idéntico al Pantone 178C (#F95A5C) — la
+       diferencia (~1% R/B) cae dentro del JND. Pero exponemos el HEX
+       exacto del manual como --red-178c por si algún render necesita
+       coincidencia 1:1 con materiales impresos (papelería, firmas, NDP).
+       Lo mismo para el azul oscuro: --navy es el valor canónico (#161A3D).
+
+       Antes del rebranding 2026 el sistema usaba --navy=#2a3554 (más
+       azul-grisáceo, menos saturado). Lo migramos a #161A3D para alinear
+       con el manual sin tocar la API CSS — todo el código que ya leía
+       var(--navy) absorbe el cambio sin tocar HTML. */
+    --primary: #fc5858;
+    --primary-dark: #e03030;
+    --primary-rgb: 252, 88, 88;     /* Para componer rgba(var(--primary-rgb), .X) */
+    --primary-soft: #fff5f5;        /* Coral super-suave — hover bg de filas/botones */
+    --primary-soft-2: #fff1f1;      /* Step más oscuro que primary-soft */
+    --red-178c: #F95A5C;            /* Pantone 178C — rojo corporativo exacto */
+    --navy: #161A3D;                /* Pantone 2768C — azul marino corporativo */
+    --navy-rgb: 22, 26, 61;         /* Para rgba(var(--navy-rgb), .X) */
+    --pink-rosa: #F7B6B6;           /* Complementario del rojo (A.04) */
+    --blue-light: #1B8FFD;          /* Complementario del azul marino (A.04) */
+    --bg: #f8f8f8;
+
+    /* Tipografía de texto — jerarquía de 5 niveles. Conservamos --text y
+       --text-muted (existentes, code los lee) y añadimos:
+         · --text-emphasis  → títulos / nombres clave (slate-900)
+         · --text-secondary → texto secundario (slate-600)
+         · --text-disabled  → placeholders, valores '—' (slate-400)
+       Mapeo con la escala Tailwind slate por familiaridad mental, todos
+       contrastan WCAG AA sobre fondos blanco/surface-muted. */
+    --text-emphasis:  #0f172a;
+    --text:           #1e293b;
+    --text-secondary: #475569;
+    --text-muted:     #5a6b7e;
+    --text-disabled:  #94a3b8;
+
+    /* Superficies (jerarquía de fondos). Pensados para gridding interno:
+         · --surface-base     → 100% blanco, cards principales
+         · --surface-elevated → ligerísimo gris (tab body, headers de tabla)
+         · --surface-muted    → gris suave (filter-bar bg, code blocks)
+         · --surface-overlay  → modal overlay scrim */
+    --surface-base:     #ffffff;
+    --surface-elevated: #fafbfc;
+    --surface-muted:    #f8fafc;
+    --surface-overlay:  rgba(15, 23, 42, .55);
+
+    /* Bordes — escala de 3:
+         · --border-light → divisores entre filas (#f1f5f9)
+         · --border       → bordes de cards y tablas (#e8e8e8)
+         · --border-strong→ bordes de input al hacer hover (var(--border-strong)) */
+    --border-light:  #f1f5f9;
+    --border:        #e8e8e8;
+    --border-strong: #cbd5e1;
+
+    --white: #ffffff;
+
+    /* Tipografía — la fuente corporativa Bw Modelica se carga en
+       fonts.css, que `style.css` importa al inicio. --font-sans expone la
+       cascada completa para que TODA la app la consuma con var() en vez
+       de repetir el string. SS01 es el stylistic set canónico del manual
+       2026 (alternates con la 'a' y 'g' open) — fallback al regular y al
+       stack del sistema en último caso. */
+    --font-sans: 'Bw Modelica SS01', 'Bw Modelica', system-ui, -apple-system,
+                 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    /* Radios — usar siempre via var(--radius-*) para mantener consistencia */
+    --radius-sm:   6px;
+    --radius-md:  10px;
+    --radius-lg:  14px;
+    --radius-xl:  18px;
+    --radius-pill: 999px;
+
+    /* Sombras — jerarquía estricta: sm = subtle/borders, md = cards,
+       lg = popovers/dropdowns, xl = modales/overlays */
+    --shadow-sm: 0 1px 2px rgba(15,23,42,0.05);
+    --shadow-md: 0 4px 12px rgba(15,23,42,0.08);
+    --shadow-lg: 0 10px 25px rgba(15,23,42,0.12);
+    --shadow-xl: 0 25px 60px rgba(15,23,42,0.20);
+    --shadow-primary: 0 4px 14px rgba(252,88,88,0.30);
+
+    /* Spacing */
+    --gap-xs:   4px;
+    --gap-sm:   8px;
+    --gap-md:  12px;
+    --gap-lg:  18px;
+    --gap-xl:  24px;
+    --gap-2xl: 32px;
+
+    /* Badges (usadas en sidebar, home, hardware, escalados) — un único
+       par de colores para "pendiente" / "informativo". Evita las 3
+       paletas distintas que había. */
+    --badge-bg:   #fef3c7;
+    --badge-text: #92400e;
+    /* Variante "atención" (estado naranja saturado, p. ej. notificaciones
+       sin leer en sidebar) */
+    --badge-attn-bg:   #fb923c;
+    --badge-attn-text: #ffffff;
+
+    /* Focus ring — accesibilidad. Lo aplica :focus-visible global más abajo. */
+    --focus-ring: 0 0 0 3px rgba(252,88,88,0.32);
+
+    /* Superficies y tintes adicionales (modo oscuro 2026-06) — dan nombre
+       a los valores que antes iban hardcodeados por las reglas de abajo. */
+    --surface-input: #fafafa;       /* bg de inputs en reposo */
+    --surface-hover: #f1f5f9;       /* hover de chips/filas neutras */
+    --primary-tint:  #fff8f8;       /* coral apenas perceptible (hover filas) */
+    --primary-soft-border: #fecaca; /* borde coral suave (hover/error leve) */
+    --danger:    #dc2626;           /* acciones destructivas */
+    --danger-fg: #c0392b;           /* texto de error sobre fondo claro */
+    --info:        #3b82f6;         /* azul informativo (cuota mensual, etc.) */
+    --info-strong: #1d6fb5;         /* azul info con más contraste */
+    --info-soft:   #f0f7ff;         /* fondo azul muy suave */
+    --info-soft-2: #e0f2fe;         /* step más saturado que info-soft */
+
+    /* Tonos de estado (badges, status-msg, avisos). Cada par bg/fg tiene
+       su variante en el bloque oscuro de abajo. */
+    --tone-blue-bg:#dbeafe;   --tone-blue-fg:#1e40af;
+    --tone-green-bg:#dcfce7;  --tone-green-fg:#166534;  --tone-green-border:#6ee7b7;
+    --tone-amber-bg:#fef3c7;  --tone-amber-fg:#92400e;  --tone-amber-border:#fde68a;
+    --tone-red-bg:#fee2e2;    --tone-red-fg:#991b1b;
+    --tone-pink-bg:#fce7f3;   --tone-pink-fg:#9d174d;
+    --tone-purple-bg:#ede9fe; --tone-purple-fg:#5b21b6;
+    --tone-indigo-bg:#e0e7ff; --tone-indigo-fg:#3730a3; --tone-indigo-border:#c7d2fe;
+    --tone-orange-bg:#fed7aa; --tone-orange-fg:#9a3412; --tone-orange-border:#fb923c;
+    --tone-cyan-bg:#ecfeff;   --tone-cyan-fg:#0e7490;
+
+    /* Legacy aliases — para no romper código que usaba var(--radius) y
+       var(--shadow). Apuntan al token estándar. */
+    --radius: var(--radius-lg);
+    --shadow: var(--shadow-md);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MODO OSCURO — redefine SOLO tokens. Las reglas de componentes no se
+   tocan: todo lo que consume var(--*) absorbe la paleta oscura.
+   Activación: atributo data-theme="dark" (switch de theme.js) o, si el
+   usuario no ha elegido nada, prefers-color-scheme del sistema. Los dos
+   bloques son idénticos porque CSS no permite combinar media query y
+   atributo en un selector.
+   ════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+    --primary-soft:   rgba(252,88,88,.12);
+    --primary-soft-2: rgba(252,88,88,.16);
+    --primary-tint:   rgba(252,88,88,.07);
+    --primary-soft-border: rgba(252,88,88,.35);
+    --bg: #0f172a;
+
+    --text-emphasis:  #f8fafc;
+    --text:           #e2e8f0;
+    --text-secondary: #b8c4d4;
+    --text-muted:     #94a3b8;
+    --text-disabled:  #64748b;
+
+    --surface-base:     #1e293b;
+    --surface-elevated: #233146;
+    --surface-muted:    #172033;
+    --surface-overlay:  rgba(2,6,23,.65);
+    --surface-input:    #16203a;
+    --surface-hover:    #283447;
+
+    --border-light:  #293548;
+    --border:        #334155;
+    --border-strong: #475569;
+
+    --white: #1e293b;   /* alias de superficie: solo se usa como background */
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.45);
+    --shadow-xl: 0 25px 60px rgba(0,0,0,0.60);
+
+    --badge-bg:   rgba(251,191,36,.16);
+    --badge-text: #fbbf24;
+
+    --danger:    #f87171;
+    --danger-fg: #fca5a5;
+    --info:        #60a5fa;
+    --info-strong: #93c5fd;
+    --info-soft:   rgba(59,130,246,.10);
+    --info-soft-2: rgba(59,130,246,.16);
+
+    --tone-blue-bg:rgba(59,130,246,.18);    --tone-blue-fg:#93c5fd;
+    --tone-green-bg:rgba(74,222,128,.16);   --tone-green-fg:#4ade80;  --tone-green-border:rgba(74,222,128,.35);
+    --tone-amber-bg:rgba(251,191,36,.16);   --tone-amber-fg:#fbbf24;  --tone-amber-border:rgba(251,191,36,.40);
+    --tone-red-bg:rgba(248,113,113,.16);    --tone-red-fg:#fca5a5;
+    --tone-pink-bg:rgba(236,72,153,.18);    --tone-pink-fg:#f9a8d4;
+    --tone-purple-bg:rgba(167,139,250,.18); --tone-purple-fg:#c4b5fd;
+    --tone-indigo-bg:rgba(129,140,248,.18); --tone-indigo-fg:#a5b4fc; --tone-indigo-border:rgba(129,140,248,.35);
+    --tone-orange-bg:rgba(251,146,60,.18);  --tone-orange-fg:#fdba74; --tone-orange-border:rgba(251,146,60,.45);
+    --tone-cyan-bg:rgba(34,211,238,.16);    --tone-cyan-fg:#67e8f9;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --primary-soft:   rgba(252,88,88,.12);
+        --primary-soft-2: rgba(252,88,88,.16);
+        --primary-tint:   rgba(252,88,88,.07);
+        --primary-soft-border: rgba(252,88,88,.35);
+        --bg: #0f172a;
+
+        --text-emphasis:  #f8fafc;
+        --text:           #e2e8f0;
+        --text-secondary: #b8c4d4;
+        --text-muted:     #94a3b8;
+        --text-disabled:  #64748b;
+
+        --surface-base:     #1e293b;
+        --surface-elevated: #233146;
+        --surface-muted:    #172033;
+        --surface-overlay:  rgba(2,6,23,.65);
+        --surface-input:    #16203a;
+        --surface-hover:    #283447;
+
+        --border-light:  #293548;
+        --border:        #334155;
+        --border-strong: #475569;
+
+        --white: #1e293b;
+
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+        --shadow-lg: 0 10px 25px rgba(0,0,0,0.45);
+        --shadow-xl: 0 25px 60px rgba(0,0,0,0.60);
+
+        --badge-bg:   rgba(251,191,36,.16);
+        --badge-text: #fbbf24;
+
+        --danger:    #f87171;
+        --danger-fg: #fca5a5;
+        --info:        #60a5fa;
+        --info-strong: #93c5fd;
+        --info-soft:   rgba(59,130,246,.10);
+        --info-soft-2: rgba(59,130,246,.16);
+
+        --tone-blue-bg:rgba(59,130,246,.18);    --tone-blue-fg:#93c5fd;
+        --tone-green-bg:rgba(74,222,128,.16);   --tone-green-fg:#4ade80;  --tone-green-border:rgba(74,222,128,.35);
+        --tone-amber-bg:rgba(251,191,36,.16);   --tone-amber-fg:#fbbf24;  --tone-amber-border:rgba(251,191,36,.40);
+        --tone-red-bg:rgba(248,113,113,.16);    --tone-red-fg:#fca5a5;
+        --tone-pink-bg:rgba(236,72,153,.18);    --tone-pink-fg:#f9a8d4;
+        --tone-purple-bg:rgba(167,139,250,.18); --tone-purple-fg:#c4b5fd;
+        --tone-indigo-bg:rgba(129,140,248,.18); --tone-indigo-fg:#a5b4fc; --tone-indigo-border:rgba(129,140,248,.35);
+        --tone-orange-bg:rgba(251,146,60,.18);  --tone-orange-fg:#fdba74; --tone-orange-border:rgba(251,146,60,.45);
+        --tone-cyan-bg:rgba(34,211,238,.16);    --tone-cyan-fg:#67e8f9;
+    }
+}
+
+/* Accesibilidad: estado de foco visible y consistente para teclado.
+   `:focus-visible` solo aparece cuando el usuario navega con teclado,
+   no con click — por lo que no contamina la UI de mouse. */
+*:focus { outline: none; }
+*:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+.tipo-btn:focus-visible,
+.pack-btn:focus-visible,
+.yn-btn:focus-visible,
+.pct-btn:focus-visible {
+    box-shadow: var(--focus-ring);
+    outline-offset: 1px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: var(--bg);
+    font-family: var(--font-sans);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Perf: fichas con 10-20 locales se renderizan en cascadas largas. El
+   browser puede saltarse layout/paint de los que están fuera de viewport
+   con content-visibility, pero necesita un tamaño aproximado para no
+   provocar CLS al scrollear. 420px es la altura media observada de una
+   .local-card colapsada con un par de campos abiertos. */
+.local-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 420px;
+}
+
+/* Perf/accesibilidad: si el usuario tiene "reducir movimiento" activado
+   apagamos animaciones y transiciones para ahorrar paint y respetar
+   la preferencia del sistema. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ── Page header (canónico — redefinir SOLO por excepción) ────────────── */
+/* `img` cubre tanto `<img class="brand-logo">` como el `<img>` simple del logo
+   que llevan algunas páginas. Mantengo el selector más específico aparte
+   por compatibilidad con páginas que ya lo usaban. */
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 24px;
+    background: var(--surface-base);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+/* Logo en la esquina superior izquierda: oculto a propósito.
+   La marca solo aparece dentro del sidebar (ver sidebar.js → .sidebar-brand-logo).
+   Si en el futuro queremos volver a mostrarlo en la cabecera, basta con
+   cambiar `display:none` por `height:32px`. */
+.page-header img,
+.page-header img.brand-logo { display: none; }
+.home-brand img { display: none; }
+.page-header h1 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.25;
+    margin: 0;
+}
+
+/* ── Empty state (canónico — alias .empty para compatibilidad con páginas
+   antiguas que ya usaban esa clase corta) ──────────────────────────── */
+.empty-state, .empty {
+    text-align: center;
+    padding: 56px 20px;
+    background: var(--surface-base);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius-lg);
+    color: var(--text-muted);
+}
+.empty-state h3, .empty h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin: 0 0 4px;
+}
+.empty-state p, .empty p {
+    font-size: 0.9rem;
+    color: var(--text-disabled);
+    margin: 0;
+}
+.empty-state svg, .empty svg {
+    width: 48px;
+    height: 48px;
+    color: var(--border-strong);
+    margin-bottom: 12px;
+}
+.empty-state-icon, .empty-icon, .empty .icon {
+    font-size: 2.6rem;
+    margin-bottom: 10px;
+    line-height: 1;
+}
+/* CTA opcional dentro del empty-state. Lo emite el helper
+   YurestConfig.emptyStateHtml() en config.js. */
+.empty-state-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 7px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--surface-base);
+    border: 1.5px solid var(--primary-soft-2);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: background .12s, border-color .12s;
+}
+.empty-state-cta:hover {
+    background: var(--primary-soft);
+    border-color: var(--primary);
+}
+
+.btn-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    background: var(--surface-base);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    padding: 0;
+}
+.btn-menu:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-soft-2);
+}
+
+/* Clases legacy ocultas (eran del header oscuro) */
+.header-inner { display: contents; }
+.brand, .brand-dot, .brand-name, .header-sub { display: none !important; }
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    margin-bottom: 14px;
+    letter-spacing: 0.02em;
+    transition: color 0.15s;
+}
+.back-link:hover { color: rgba(255,255,255,0.85); }
+
+/* ── Badge canónico ────────────────────────────────────────────────────────
+   Sustituye a las múltiples implementaciones esparcidas (cl-tipo-badge,
+   cl-ticket-status, badge-estado, badge-plan, ec-chip-*, cm-chip-*…)
+   con UN solo componente parametrizado por variantes.
+
+   Uso:
+     <span class="badge badge--pro">Pro</span>
+     <span class="badge badge--success">Activo</span>
+     <span class="badge badge--chip badge--info">Backoffice</span>
+
+   Modos:
+     · sin modificador: UPPERCASE + letter-spacing (estado, plan)
+     · .badge--chip:    natural case + más legible (chips de listas largas)
+     · .badge--lg:      tamaño grande para hero (Pro, Lite, Corporate)
+
+   Variantes (cada una define --badge-bg + --badge-fg via :root cascade):
+     · semánticas:  --neutral, --info, --success, --warning, --danger,
+                    --primary, --pink, --purple, --indigo, --slate
+     · aliases UX:  --lite, --pro, --corporate (tipo cliente);
+                    --activo, --pendiente (estado);
+                    --archivado (gris muted)
+
+   Las clases existentes no se tocan en este commit — el sistema nuevo
+   convive con ellas y se adopta progresivamente al refactorizar cada vista. */
+.badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 9px; border-radius: var(--radius-pill);
+    font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    line-height: 1.3;
+    background: var(--_badge-bg, var(--border-light));
+    color: var(--_badge-fg, var(--text-secondary));
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+.badge--lg {
+    padding: 5px 13px;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+}
+/* Modo chip — para listas de items donde el UPPERCASE estorbaba (módulos,
+   integraciones, nombres de locales). */
+.badge--chip {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+}
+
+/* Paletas semánticas */
+.badge--neutral { --_badge-bg: var(--border-light);    --_badge-fg: var(--text-secondary) }
+.badge--info    { --_badge-bg: var(--tone-blue-bg);                --_badge-fg: var(--tone-blue-fg) }
+.badge--success { --_badge-bg: var(--tone-green-bg);                --_badge-fg: var(--tone-green-fg) }
+.badge--warning { --_badge-bg: var(--tone-amber-bg);                --_badge-fg: var(--tone-amber-fg) }
+.badge--danger  { --_badge-bg: var(--tone-red-bg);                --_badge-fg: var(--tone-red-fg) }
+.badge--primary { --_badge-bg: var(--primary-soft-2);  --_badge-fg: var(--primary) }
+.badge--pink    { --_badge-bg: var(--tone-pink-bg);                --_badge-fg: var(--tone-pink-fg) }
+.badge--purple  { --_badge-bg: var(--tone-purple-bg);                --_badge-fg: var(--tone-purple-fg) }
+.badge--indigo  { --_badge-bg: var(--tone-indigo-bg);                --_badge-fg: var(--tone-indigo-fg) }
+.badge--slate   { --_badge-bg: var(--border-light);    --_badge-fg: var(--text-disabled) }
+.badge--hold    { --_badge-bg: var(--tone-indigo-bg);                --_badge-fg: var(--tone-indigo-fg) }
+
+/* Aliases UX — para que el HTML lea cerca del dominio (.badge--pro vs
+   .badge--success). No hay coste de redirección; CSS variables sólo. */
+.badge--lite        { --_badge-bg: var(--tone-blue-bg);             --_badge-fg: var(--tone-blue-fg) }
+.badge--pro         { --_badge-bg: var(--tone-green-bg);             --_badge-fg: var(--tone-green-fg) }
+.badge--corporate   { --_badge-bg: var(--tone-amber-bg);             --_badge-fg: var(--tone-amber-fg) }
+.badge--activo      { --_badge-bg: var(--tone-green-bg);             --_badge-fg: var(--tone-green-fg) }
+.badge--pendiente   { --_badge-bg: var(--tone-amber-bg);             --_badge-fg: var(--tone-amber-fg) }
+.badge--cancelado   { --_badge-bg: var(--border-light); --_badge-fg: var(--text-disabled) }
+.badge--archivado   { --_badge-bg: var(--border-light); --_badge-fg: var(--text-secondary) }
+/* Tickets Zendesk — semantic spectrum */
+.badge--ticket-new      { --_badge-bg: var(--tone-pink-bg); --_badge-fg: var(--tone-pink-fg) }
+.badge--ticket-open     { --_badge-bg: var(--tone-red-bg); --_badge-fg: var(--tone-red-fg) }
+.badge--ticket-pending  { --_badge-bg: var(--tone-amber-bg); --_badge-fg: var(--tone-amber-fg) }
+.badge--ticket-hold     { --_badge-bg: var(--tone-indigo-bg); --_badge-fg: var(--tone-indigo-fg) }
+.badge--ticket-solved   { --_badge-bg: var(--tone-green-bg); --_badge-fg: var(--tone-green-fg) }
+.badge--ticket-closed   { --_badge-bg: var(--border-light); --_badge-fg: var(--text-secondary) }
+
+/* ── Modal canónico ────────────────────────────────────────────────────────
+   Sustituye las ~9 implementaciones inline de modal esparcidas por el portal
+   (bajas, presupuestos, stock, ofertas, escalados, contabilidad, sinasignar,
+   admin, promociones) con UN sistema único.
+
+   Markup canónico:
+     <div id="x-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+       <div class="modal modal--md">                <!-- tamaños: --sm/--md/--lg/--xl -->
+         <div class="modal-header">
+           <div>
+             <h3>Título</h3>
+             <p class="modal-subtitle">Subtítulo opcional</p>
+           </div>
+           <button class="modal-close" aria-label="Cerrar">&times;</button>
+         </div>
+         <div class="modal-body">…</div>
+         <div class="modal-footer">                  <!-- o .modal-footer--between -->
+           <button class="btn-secondary">Cancelar</button>
+           <button class="btn-primary">Guardar</button>
+         </div>
+       </div>
+     </div>
+
+   Apertura/cierre: classList.toggle('open') sobre .modal-overlay.
+
+   El sistema cubre la estructura del marco, NO los botones internos — cada
+   módulo conserva su propia paleta de botones (algunos son indigo, otros
+   coral). El cl-modal/cl-link-modal de clientes.html (ficha con tabs) es
+   un caso aparte, no se toca aquí. */
+.modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 800;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; visibility: visible; }
+
+.modal {
+    background: var(--surface-base);
+    border-radius: 16px;
+    width: 100%; max-width: 560px;             /* default = --md */
+    max-height: 90vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+    transform: translateY(12px) scale(0.98);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+.modal--sm { max-width: 440px; }
+.modal--md { max-width: 560px; }
+.modal--lg { max-width: 720px; }
+.modal--xl { max-width: 980px; width: min(980px, 96vw); }
+
+.modal-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px;
+    padding: 18px 22px;
+    border-bottom: 1.5px solid var(--border-light);
+    flex-shrink: 0;
+}
+.modal-header h2,
+.modal-header h3 {
+    margin: 0;
+    font-size: 1rem; font-weight: 800;
+    color: var(--text-emphasis);
+    letter-spacing: -0.005em;
+}
+.modal-subtitle {
+    margin: 3px 0 0;
+    font-size: 0.8rem; color: var(--text-disabled);
+    line-height: 1.45;
+}
+.modal-close {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border-light);
+    background: var(--surface-base);
+    color: var(--text-muted);
+    font-size: 1.1rem; cursor: pointer; font-family: inherit;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.modal-close:hover {
+    background: var(--surface-muted);
+    border-color: var(--border-strong);
+    color: var(--text);
+}
+
+.modal-body {
+    padding: 20px 22px;
+    overflow-y: auto;
+    flex: 1;
+}
+.modal-body::-webkit-scrollbar { width: 5px; }
+.modal-body::-webkit-scrollbar-track { background: var(--surface-muted); }
+.modal-body::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+.modal-footer {
+    padding: 14px 22px 18px;
+    border-top: 1.5px solid var(--border-light);
+    display: flex; gap: 10px; justify-content: flex-end;
+    flex-shrink: 0;
+}
+.modal-footer--between { justify-content: space-between; align-items: center; }
+
+/* ── Container ───────────────────────────────────────── */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px 60px;
+}
+
+/* ── Barra de comercial ──────────────────────────────────────────────────── */
+.comercial-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 22px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+}
+.comercial-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+.comercial-select {
+    flex: 1;
+    max-width: 280px;
+    padding: 8px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--surface-muted);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.comercial-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--white);
+}
+.comercial-select:hover {
+    border-color: var(--border-strong);
+}
+
+/* ── Status messages ─────────────────────────────────── */
+.status-msg {
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.status-msg.success { background: var(--tone-green-bg); color: var(--tone-green-fg); border: 1px solid var(--tone-green-border); }
+.status-msg.error   { background: var(--tone-red-bg); color: var(--tone-red-fg); border: 1px solid var(--primary-soft-border); }
+.status-msg.hidden  { display: none; }
+.hidden { display: none !important; }
+
+/* ── Cards ───────────────────────────────────────────── */
+.card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 28px 30px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: var(--radius) 0 0 var(--radius);
+}
+
+/* ── Card header ─────────────────────────────────────── */
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.card-header h3 {
+    font-size: 0.975rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.01em;
+}
+
+.section-num {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+}
+
+/* Local card header */
+.local-header { justify-content: space-between; }
+
+/* Botón copiar datos JP */
+.btn-copy-jp {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: var(--surface-hover);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-copy-jp:hover {
+    background: var(--tone-indigo-bg);
+    border-color: var(--tone-indigo-border);
+    color: var(--tone-indigo-fg);
+}
+.btn-copy-jp:active { transform: scale(0.97); }
+
+/* Toggle TPV no integrado */
+.toggle-tpv-no-int {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    background: var(--tone-amber-bg);
+    border: 1.5px solid var(--tone-amber-border);
+    border-radius: 8px;
+    color: var(--tone-amber-fg);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+.toggle-tpv-no-int input[type="checkbox"] { margin: 0; cursor: pointer; }
+.toggle-tpv-no-int:has(input:checked) {
+    background: var(--tone-orange-bg);
+    border-color: var(--tone-orange-border);
+    color: var(--tone-orange-fg);
+}
+
+/* Estado inválido en inputs */
+.input-invalid {
+    border-color: var(--danger) !important;
+    background-color: var(--tone-red-bg) !important;
+}
+.input-invalid:focus {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+}
+.local-header-left { display: flex; align-items: center; gap: 12px; }
+.local-header-left h3 { margin: 0; }
+
+.btn-remove {
+    background: none;
+    border: none;
+    color: var(--text-disabled);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 6px;
+    transition: 0.2s;
+    line-height: 1;
+}
+.btn-remove:hover { background: var(--tone-red-bg); color: var(--danger); }
+
+/* ── Form grid ───────────────────────────────────────── */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 18px;
+}
+
+/* form-group base — column modifiers below override grid-column */
+.form-group { grid-column: span 4; display: flex; flex-direction: column; gap: 6px; }
+.col-12 { grid-column: span 12; }
+.col-8  { grid-column: span 8;  }
+.col-6  { grid-column: span 6;  }
+.col-4  { grid-column: span 4;  }
+.col-2  { grid-column: span 2;  }
+
+label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="number"] {
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--surface-input);
+    transition: all 0.15s;
+    width: 100%;
+    font-family: inherit;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--surface-base);
+    box-shadow: 0 0 0 3px rgba(252,88,88,0.12);
+}
+
+input::placeholder { color: var(--text-disabled); font-size: 0.875rem; }
+
+select {
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--surface-input);
+    transition: all 0.15s;
+    width: 100%;
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+}
+
+select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background-color: white;
+    box-shadow: 0 0 0 3px rgba(252,88,88,0.12);
+}
+
+select option { color: var(--text); }
+
+/* ── Yes/No toggle ───────────────────────────────────── */
+.yn-group { display: flex; gap: 8px; }
+.yn-group input[type="radio"] { display: none; }
+
+.yn-btn {
+    padding: 8px 22px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--surface-input);
+    transition: all 0.15s;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.yn-btn:hover { border-color: var(--border-strong); color: var(--text); }
+
+.yn-group input[type="radio"]:checked + .yn-btn {
+    border-color: var(--border);
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+/* "No" selected = neutral */
+#firmas_no:checked + .yn-btn {
+    border-color: var(--text-disabled);
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+/* "Sí" selected = primary color */
+#firmas_si:checked + .yn-btn {
+    border-color: var(--primary);
+    background: rgba(252,88,88,0.07);
+    color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(252,88,88,0.1);
+}
+
+/* ── Pack selector (firmas) ──────────────────────────── */
+.pack-group {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.pack-group input[type="radio"] { display: none; }
+
+.pack-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 90px;
+    padding: 12px 8px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    background: var(--surface-input);
+    transition: all 0.15s;
+    text-transform: none;
+    letter-spacing: 0;
+    gap: 2px;
+}
+
+.pack-btn:hover {
+    border-color: var(--primary);
+    background: rgba(252,88,88,0.04);
+}
+
+.pack-group input[type="radio"]:checked + .pack-btn {
+    border-color: var(--primary);
+    background: rgba(252,88,88,0.07);
+    box-shadow: 0 0 0 3px rgba(252,88,88,0.1);
+}
+
+.pack-num {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+}
+
+.pack-group input[type="radio"]:checked + .pack-btn .pack-num {
+    color: var(--primary);
+}
+
+.pack-sub {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: lowercase;
+    letter-spacing: 0;
+}
+
+/* ── Toggles / checkboxes ────────────────────────────── */
+.toggles-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 24px;
+    align-items: center;
+    padding-top: 8px;
+}
+
+.toggle-check-item { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+.toggle-check-item input[type="checkbox"] {
+    width: 16px; height: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+    accent-color: var(--primary);
+    border-radius: 4px;
+}
+
+.toggle-check-item label {
+    margin-bottom: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+/* ── Lite badge ──────────────────────────────────────── */
+.lite-badge {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+}
+
+/* ── Subsection labels ───────────────────────────────── */
+.subsection-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-disabled);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+.subsection-label--sep { margin-top: 6px; }
+
+/* ── Collapsible card ────────────────────────────────── */
+.card-header--collapsible {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.card-header--collapsible:hover { background: rgba(0,0,0,0.015); }
+
+.fin-chevron {
+    color: var(--text-disabled);
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+}
+.fin-chevron--up { transform: rotate(-180deg); }
+
+.fin-body {
+    overflow: hidden;
+    max-height: 5000px;
+    transition: max-height 0.5s ease, opacity 0.25s ease, padding 0.25s ease;
+    opacity: 1;
+}
+.fin-body--collapsed {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ── Credential inputs ───────────────────────────────── */
+.cred-input {
+    background: var(--primary-tint);
+    border-color: rgba(252,88,88,0.25);
+    color: var(--danger-fg);
+    font-weight: 600;
+    font-size: 0.875rem;
+    letter-spacing: -0.01em;
+}
+.cred-input:focus {
+    border-color: var(--primary);
+    background: var(--surface-base);
+}
+.cred-input::placeholder { color: #d4a0a0; font-weight: 400; }
+
+/* ── Euro input ──────────────────────────────────────── */
+.input-euro-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.input-euro-wrap input {
+    flex: 1;
+    padding-right: 32px;
+}
+.euro-symbol {
+    position: absolute;
+    right: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-disabled);
+    pointer-events: none;
+}
+
+/* ── Financial table ─────────────────────────────────── */
+.fin-table-wrap {
+    margin-top: 4px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.fin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+.fin-table thead tr {
+    background: var(--surface-muted);
+    border-bottom: 1.5px solid var(--border);
+}
+.fin-table th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-disabled);
+}
+.fin-table th:last-child { text-align: right; }
+.fin-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+}
+.fin-table tbody tr:last-child { border-bottom: none; }
+.fin-table tbody tr:hover { background: var(--surface-input); }
+.fin-table td {
+    padding: 8px 16px;
+    color: var(--text);
+    font-weight: 500;
+}
+.fin-table td:last-child { width: 180px; }
+.fin-input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--surface-base);
+    text-align: right;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -moz-appearance: textfield;
+}
+.fin-input::-webkit-outer-spin-button,
+.fin-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.fin-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(252,88,88,0.1);
+}
+.fin-table tfoot { border-top: 2px solid var(--border); background: var(--surface-muted); }
+.fin-total-row td {
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text);
+}
+.fin-total-row td:last-child {
+    text-align: right;
+    color: var(--primary);
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+}
+
+/* ── Botón Añadir Local — horizontal dentro de #ficha-nav ───────────
+   Antes era una pestaña fija vertical en el borde izquierdo de la
+   ventana (position:fixed + writing-mode:vertical-lr). Ahora vive
+   debajo del listado de secciones y se ancla al ancho del nav. */
+#add-local-float {
+    display: block;
+    width: calc(100% - 4px);
+    margin: 12px 2px 2px;
+    padding: 11px 14px;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: inherit;
+    letter-spacing: 0.04em;
+    text-align: center;
+    box-shadow: 0 3px 12px rgba(252,88,88,0.28);
+    transition: transform 0.12s, box-shadow 0.18s, filter 0.18s;
+}
+#add-local-float:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(252,88,88,0.40);
+    filter: brightness(1.05);
+}
+#add-local-float:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(252,88,88,0.28);
+}
+
+/* ── Action buttons ──────────────────────────────────── */
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 4px;
+}
+
+.main-btns { display: flex; gap: 10px; }
+
+.btn {
+    padding: 11px 22px;
+    border-radius: 9px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+    font-family: inherit;
+}
+
+.btn-add {
+    background: rgba(252,88,88,0.07);
+    color: var(--danger-fg);
+    border: 1.5px solid rgba(252,88,88,0.2);
+}
+.btn-add:hover { background: rgba(252,88,88,0.12); border-color: rgba(252,88,88,0.35); }
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(252,88,88,0.35);
+}
+.btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(252,88,88,0.45);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: var(--surface-base);
+    border: 1.5px solid var(--border);
+    color: var(--text-muted);
+}
+.btn-secondary:hover { border-color: var(--border-strong); color: var(--text); }
+
+.btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+/* ── Módulos grid ────────────────────────────────────── */
+.modulos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+}
+
+.modulo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    cursor: pointer;
+    background: var(--surface-input);
+    transition: all 0.15s;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.modulo-item:hover {
+    border-color: var(--primary);
+    background: rgba(252,88,88,0.04);
+}
+
+.modulo-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+    accent-color: var(--primary);
+}
+
+.modulo-item:has(input:checked) {
+    border-color: var(--primary);
+    background: rgba(252,88,88,0.07);
+    color: var(--primary);
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+
+/* ── Skeleton loaders ──────────────────────────────────────────────────
+   Sustituye al spinner solitario en el primer paint con placeholders
+   que mantienen el layout. Uso:
+       <div class="skeleton-card">
+           <div class="skeleton skeleton-line w-60"></div>
+           <div class="skeleton skeleton-line w-40"></div>
+       </div>
+   Se quitan al renderizar el contenido real.
+   ─────────────────────────────────────────────────────────────────── */
+.skeleton {
+    background: linear-gradient(90deg, var(--border-light) 0%, var(--border) 50%, var(--border-light) 100%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s infinite linear;
+    border-radius: var(--radius-sm);
+    color: transparent !important;
+    user-select: none;
+    pointer-events: none;
+}
+.skeleton-line {
+    height: 14px;
+    margin-bottom: 8px;
+    border-radius: var(--radius-sm);
+}
+.skeleton-line:last-child { margin-bottom: 0; }
+.skeleton-line.w-90 { width: 90%; }
+.skeleton-line.w-80 { width: 80%; }
+.skeleton-line.w-70 { width: 70%; }
+.skeleton-line.w-60 { width: 60%; }
+.skeleton-line.w-50 { width: 50%; }
+.skeleton-line.w-40 { width: 40%; }
+.skeleton-line.w-30 { width: 30%; }
+.skeleton-card {
+    background: var(--surface-base);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+}
+.skeleton-circle {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.skeleton-row-flex {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+@keyframes skeleton-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+/* Respeta prefers-reduced-motion: deshabilita la animación pero mantiene
+   el placeholder visible. */
+@media (prefers-reduced-motion: reduce) {
+    .skeleton { animation: none; }
+}
+
+/* ── Paginación de listados (lista.html, etc) ───────────────────────── */
+.paginacion {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 4px 4px;
+    flex-wrap: wrap;
+}
+.paginacion:empty { display: none; }
+.pag-info {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.pag-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pag-current {
+    font-size: 0.78rem;
+    color: var(--text);
+    font-weight: 600;
+    padding: 0 8px;
+    font-variant-numeric: tabular-nums;
+}
+.pag-btn {
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface-base);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color .15s, color .15s, background .15s;
+}
+.pag-btn:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-soft-2);
+}
+.pag-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Tablas anchas: el wrapper envolvente recorta el desbordamiento y
+   dibuja su propia barra horizontal. Aplica a:
+    .table-scroll → utilidad explícita para tablas nuevas
+    .table-wrap   → clase ya existente en clientes / escalados / hardware
+    .wrap         → clase ya existente en presupuestos (tabla principal)
+   `-webkit-overflow-scrolling:touch` da inercia en iOS. */
+.table-scroll, .table-wrap, .wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* En pantallas medianas (iPad portrait) el sidebar 248px deja muy
+   poco espacio al contenido. Reducimos a 220px sin perder
+   legibilidad — el sidebar.js ya gestiona el slide-in con overlay. */
+@media (max-width: 1024px) {
+    .sidebar { width: 220px; }
+}
+
+@media (max-width: 640px) {
+    .page-header { padding: 30px 20px 40px; }
+    .page-header h1 { font-size: 1.35rem; }
+    .container { padding: 20px 16px 48px; }
+    .card { padding: 22px 18px; }
+    .form-group,
+    .col-12, .col-8, .col-6, .col-4, .col-2 { grid-column: span 12; }
+    .actions { flex-direction: column; align-items: stretch; }
+    .main-btns { flex-direction: column; }
+    .btn { text-align: center; }
+    .toggles-row { flex-wrap: wrap; }
+    /* En mobile #add-local-float ya hereda el layout horizontal/inline del nav,
+       no requiere override. (Antes este override invertía writing-mode y lo
+       sacaba al borde izquierdo — ya no aplica.) */
+    /* Touch target mínimo 44×44 (recomendación Apple HIG / WCAG) */
+    .btn-menu { width: 44px; height: 44px; }
+}
+
+/* ── Comisión distribuidor ───────────────────────────── */
+.comision-pct-badge {
+    display: inline-flex;
+    align-items: center;
+    background: var(--tone-red-bg);
+    color: var(--primary);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 20px;
+    margin-left: 4px;
+    letter-spacing: 0.02em;
+}
+.comision-display {
+    background: var(--primary-tint);
+    border: 1.5px solid rgba(252,88,88,0.25);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.01em;
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+}
+
+/* ── Selector porcentaje comisión ───────────────────────── */
+.pct-group {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.pct-group input[type="radio"],
+.pct-group input[type="checkbox"] { display: none; }
+.pct-btn {
+    padding: 6px 18px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--surface-input);
+    transition: all 0.15s;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.pct-btn:hover { border-color: var(--primary-soft-border); color: var(--primary); }
+.pct-group input[type="radio"]:checked + .pct-btn,
+.pct-group input[type="checkbox"]:checked + .pct-btn {
+    border-color: var(--primary);
+    background: rgba(252,88,88,0.07);
+    color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(252,88,88,0.1);
+}
+.pct-btn--xs {
+    padding: 3px 10px;
+    font-size: 0.74rem;
+    border-radius: 6px;
+}
+
+/* ── Tipo de cliente ─────────────────────────────────── */
+.tipo-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.tipo-group input[type="radio"] { display: none; }
+
+.tipo-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 12px 22px;
+    border: 2px solid var(--border);
+    border-radius: 11px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--surface-base);
+    transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+    user-select: none;
+    min-width: 88px;
+}
+.tipo-btn .tipo-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+.tipo-btn:hover {
+    border-color: var(--primary-soft-border);
+    color: var(--primary);
+}
+.tipo-group input[type="radio"]:checked + .tipo-btn {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(252,88,88,0.12);
+}
+/* Tipo bloqueado (completar ficha desde solicitud) */
+.tipo-group--locked .tipo-btn {
+    cursor: default;
+    pointer-events: none;
+    opacity: 0.45;
+}
+.tipo-group--locked input[type="radio"]:checked + .tipo-btn {
+    opacity: 1;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* ── Carrito de paquetes ─────────────────────────────── */
+.tipo-cart {
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface-base);
+}
+.tipo-cart-hd {
+    background: var(--surface-muted);
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+}
+.tipo-cart-hd strong { color: var(--primary); }
+
+.tipo-cart-empty {
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--text-disabled);
+    font-size: 0.85rem;
+}
+.tipo-cart-empty strong { color: var(--text); }
+
+.cart-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.cart-item:last-child { border-bottom: none; }
+.cart-item:hover { background: var(--primary-tint); }
+
+
+.cart-item input[type="checkbox"] { accent-color: var(--primary); width: 16px; height: 16px; flex-shrink: 0; }
+.cart-item-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cart-item-nombre { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+.cart-item-modulos { font-size: 0.74rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.corp-module-locales {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
+    align-items: center;
+}
+/* Pills de locales cuando el módulo padre aún NO está activo: se dibujan
+   atenuados para dar pista visual de que el módulo no está contratado,
+   pero SIGUEN siendo clicables — al seleccionar uno, onModuloLocalToggle()
+   activa automáticamente el módulo padre y la opacidad vuelve a 100%. */
+.cart-item:not(:has(> input[name="cart_item"]:checked)) .corp-module-locales .pct-btn--xs {
+    opacity: 0.45;
+}
+/* Botón "Todos" dentro de la lista de locales de un módulo. Es pequeño,
+   con estilo diferenciado (fondo sutil azul) para que destaque un poco
+   sobre los pills de locales. Al activarse (todos los locales marcados)
+   invierte a estilo sólido para dar feedback visual. */
+.corp-ml-todos {
+    padding: 3px 9px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface-muted);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    margin-right: 2px;
+}
+.corp-ml-todos:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(252, 88, 88, 0.06);
+}
+.corp-ml-todos.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+}
+.corp-ml-todos.active:hover {
+    background: var(--primary-dark);
+}
+/* El botón Todos NO se desactiva visualmente aunque el módulo padre
+   esté sin marcar — queremos poder pulsarlo para activar todos los
+   locales y que el módulo se auto-active. */
+.cart-item:not(:has(> input[name="cart_item"]:checked)) .corp-module-locales .corp-ml-todos {
+    opacity: 1;
+    pointer-events: auto;
+}
+.cart-item-pricing { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+.cart-item-pago { font-size: 0.70rem; color: var(--text-muted); opacity: 0.75; white-space: nowrap; }
+.cart-item-precio-wrap { display: flex; align-items: center; gap: 3px; }
+.cart-item-precio-input {
+    width: 52px;
+    text-align: right;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 1px 4px;
+    background: transparent;
+    transition: border-color 0.15s, background 0.15s;
+    -moz-appearance: textfield;
+}
+.cart-item-precio-input::-webkit-outer-spin-button,
+.cart-item-precio-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cart-item-precio-input:hover { border-color: var(--border-strong); background: var(--surface-base); }
+.cart-item-precio-input:focus { border-color: var(--primary); background: var(--surface-base); outline: none; color: var(--text); }
+.cart-item-euro { font-size: 0.82rem; font-weight: 700; color: var(--text-muted); }
+.cart-item:has(input:checked) { background: var(--primary-tint); }
+.cart-item:has(input:checked) .cart-item-precio-input { color: var(--primary); }
+.cart-item:has(input:checked) .cart-item-euro { color: var(--primary); }
+.cart-item:has(input:checked) .cart-item-nombre { color: var(--primary); }
+
+.tipo-cart-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: var(--surface-muted);
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+/* Fila subtotal */
+.tipo-cart-footer--sub span:last-child { color: var(--text); font-size: 0.88rem; }
+
+/* Fila descuento */
+.tipo-cart-footer--descuento { font-weight: 500; }
+.tipo-cart-footer--descuento label { font-size: 0.82rem; color: var(--text-muted); cursor: default; }
+.cart-descuento-wrap { display: flex; align-items: center; gap: 4px; }
+.cart-descuento-minus { font-size: 1rem; color: #e57373; font-weight: 700; line-height: 1; }
+.cart-descuento-input {
+    width: 64px;
+    text-align: right;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #e57373;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 1px 4px;
+    background: transparent;
+    transition: border-color 0.15s, background 0.15s;
+    -moz-appearance: textfield;
+}
+.cart-descuento-input::-webkit-outer-spin-button,
+.cart-descuento-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cart-descuento-input:hover { border-color: var(--border-strong); background: var(--surface-base); }
+.cart-descuento-input:focus { border-color: #e57373; background: var(--surface-base); outline: none; }
+.cart-descuento-euro { font-size: 0.8rem; font-weight: 700; color: #e57373; }
+
+/* Fila total */
+.tipo-cart-footer--total {
+    border-top: 1.5px solid var(--border);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.tipo-cart-footer--total span:last-child { color: var(--primary); font-size: 1.05rem; }
+
+/* Caja recurrencia mensual */
+.tipo-cart--mensual { border-color: var(--tone-blue-bg); }
+.tipo-cart--mensual .tipo-cart-hd { background: var(--info-soft); border-bottom-color: var(--tone-blue-bg); color: var(--info); font-weight: 600; }
+.tipo-cart--mensual .tipo-cart-footer { background: var(--info-soft); border-top-color: var(--tone-blue-bg); }
+.tipo-cart-footer--mensual-total span:last-child { color: var(--info); font-size: 1rem; }
+/* Descuento dentro del bloque mensual: colores azul */
+.tipo-cart-footer--mensual-desc .cart-descuento-minus,
+.tipo-cart-footer--mensual-desc .cart-descuento-input,
+.tipo-cart-footer--mensual-desc .cart-descuento-euro { color: var(--info); }
+.tipo-cart-footer--mensual-desc .cart-descuento-input:focus { border-color: var(--info); }
+.tipo-cart-empty--sm { padding: 16px 20px; font-size: 0.8rem; }
+
+/* ── Setup corporate ────────────────────────────────────────────────────── */
+.corp-setup-body {
+    padding: 12px 16px;
+    background: var(--surface-base);
+    border-bottom: 1px solid var(--border);
+}
+.corp-setup-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.corp-setup-label {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: 0.02em;
+}
+.corp-setup-label strong { font-weight: 900; color: var(--text); }
+
+/* ── Fila de descuento corporate (setup y recurrencia) ───── */
+.corp-discount-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: var(--primary-tint);
+    border-top: 1px solid var(--border);
+}
+.tipo-cart-footer--neto {
+    background: var(--primary-tint);
+    border-top: 2px solid var(--primary);
+}
+.tipo-cart-footer--neto span,
+.tipo-cart-footer--neto strong { color: var(--primary); }
+
+/* ── Selector de recurrencia en setup corporate ─────────── */
+.corp-setup-periodo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: var(--surface-muted);
+    border-top: 1px solid var(--border);
+}
+.corp-setup-periodo-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Selector de locales en módulos corporate ───────────── */
+.corp-locales-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--surface-muted);
+    border-bottom: 1px solid var(--border);
+}
+.corp-loc-label {
+    font-size: 0.80rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Recurrencia corporate ───────────────────────────────────────────────── */
+.corp-recur-periodo {
+    padding: 10px 16px;
+    background: var(--surface-input);
+    border-bottom: 1px solid var(--border);
+}
+.corp-recur-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-base);
+}
+.corp-recur-item:last-child { border-bottom: none; }
+.corp-recur-item-nombre {
+    flex: 1;
+    font-size: 0.85rem;
+    color: var(--text);
+}
+.corp-recur-item-precio {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+/* ── Filas por local en recurrencia mensual ─────────────────────────────── */
+.mensual-local-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--tone-blue-bg);
+    background: var(--surface-base);
+}
+.mensual-local-row:last-child { border-bottom: none; }
+.mensual-local-nombre {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Toggle mensualidad anualizada ──────────────────────────────────────── */
+.tipo-cart-footer--anualizada { border-top-color: var(--tone-blue-bg); }
+.anualizada-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.83rem;
+    font-weight: 500;
+    color: var(--info);
+    cursor: pointer;
+    user-select: none;
+}
+.anualizada-label input[type="checkbox"] { accent-color: var(--info); width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ── Fila total anualizado ──────────────────────────────────────────────── */
+.tipo-cart-footer--anual {
+    background: var(--info-soft-2);
+    border-top: none;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+.tipo-cart-footer--anual span:first-child { font-size: 0.8rem; color: var(--info-strong); font-weight: 600; }
+.tipo-cart-footer--anual span:last-child  { color: var(--info-strong); font-weight: 800; font-size: 1rem; }
+
+/* ── Widget resumen flotante ────────────────────────────────────────────── */
+#resumen-flotante {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 200;
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 2px 8px rgba(252,88,88,0.08);
+    min-width: 170px;
+    pointer-events: none;
+}
+.resumen-titulo {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+.resumen-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+}
+.resumen-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.resumen-label--mensual { color: var(--info); }
+.resumen-valor {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--primary);
+    white-space: nowrap;
+}
+.resumen-valor--mensual { color: var(--info); }
+.resumen-label--firmas  { color: #10b981; }
+.resumen-valor--firmas  { color: #10b981; }
+.resumen-fila--firmas   { margin-top: 2px; }
+.resumen-sep {
+    border-top: 1px solid var(--border);
+    margin: 8px 0;
+}
+.resumen-label--total { font-weight: 700; color: var(--text); }
+.resumen-valor--total { color: var(--primary); font-size: 1.05rem; }
+.resumen-sep + .resumen-fila--total-wrapper { margin-top: 0; }
+
+/* ──────────────────────────────────────────────────────────
+   Sidebar compartida (antes estaba inline en cada HTML)
+   ────────────────────────────────────────────────────────── */
+.sidebar-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,23,42,0.45);
+    z-index: 500; opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+}
+.sidebar-overlay.open { opacity: 1; pointer-events: all; }
+.sidebar {
+    position: fixed; top: 0; left: 0;
+    width: 248px; height: 100vh;
+    background: var(--surface-base); z-index: 600;
+    transform: translateX(-100%);
+    transition: transform 0.26s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.13);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+.sidebar::-webkit-scrollbar { width: 8px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+.sidebar::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+.sidebar .sidebar-hd { position: sticky; top: 0; background: var(--surface-base); z-index: 2; }
+.sidebar.open { transform: translateX(0); }
+.sidebar-hd {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 18px 16px; border-bottom: 1.5px solid var(--border-light);
+}
+.sidebar-brand {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.78rem; font-weight: 800;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--primary);
+}
+.sidebar-brand-dot {
+    width: 8px; height: 8px; background: var(--primary); border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(252,88,88,0.25);
+}
+.sidebar-close {
+    width: 28px; height: 28px; border-radius: 8px;
+    border: 1.5px solid var(--border); background: var(--surface-muted);
+    color: var(--text-muted); font-size: 0.9rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+}
+.sidebar-close:hover { background: var(--tone-red-bg); border-color: var(--primary-soft-border); color: var(--danger); }
+.sidebar-label {
+    padding: 16px 18px 6px;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-disabled);
+}
+.sidebar-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 18px; margin: 2px 10px; border-radius: 10px;
+    font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);
+    text-decoration: none; cursor: pointer;
+    transition: background 0.14s, color 0.14s;
+}
+.sidebar-item:hover { background: var(--surface-muted); color: var(--text); }
+.sidebar-item.active { background: var(--primary-soft-2); color: var(--primary); font-weight: 700; }
+.sidebar-item svg { flex-shrink: 0; opacity: 0.7; }
+.sidebar-item.active svg { opacity: 1; }
+.sidebar-group { margin: 2px 0; }
+.sidebar-group-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 18px; margin: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);
+    cursor: pointer; user-select: none;
+    transition: background 0.14s, color 0.14s;
+}
+.sidebar-group-header:hover { background: var(--surface-muted); color: var(--text); }
+.sidebar-group-header svg { flex-shrink: 0; opacity: 0.7; }
+.sidebar-group-chevron { margin-left: auto; transition: transform 0.18s; }
+.sidebar-group.open .sidebar-group-chevron { transform: rotate(90deg); }
+.sidebar-group-children { max-height: 0; overflow: hidden; transition: max-height 0.2s ease; }
+.sidebar-group.open .sidebar-group-children { max-height: 500px; }
+.sidebar-group-children .sidebar-item {
+    padding-left: 44px; font-size: 0.84rem; position: relative;
+}
+.sidebar-group-children .sidebar-item::before {
+    content: ''; position: absolute; left: 30px; top: 50%;
+    width: 8px; height: 1.5px; background: var(--border-strong);
+}
+.sidebar-badge {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:22px; height:22px; padding:0 8px;
+    font-size:11px; font-weight:800; color:#fff;
+    background:linear-gradient(135deg,#fb923c,#f59e0b);
+    border-radius:999px; margin-left:auto;
+    box-shadow:0 1px 3px rgba(245,158,11,0.35); letter-spacing:0.02em;
+}
+.sidebar-badge:empty { display:none }
+.sidebar-group-badge {
+    display:none; min-width:20px; height:20px; padding:0 7px;
+    font-size:10px; font-weight:800; color:#fff;
+    background:linear-gradient(135deg,#fb923c,#f59e0b);
+    border-radius:999px; box-shadow:0 1px 3px rgba(245,158,11,.35);
+    align-items:center; justify-content:center; margin-left:auto; letter-spacing:.02em;
+}
+.sidebar-group:not(.open) .sidebar-group-badge:not(:empty) { display:inline-flex; }
+.sidebar-group:not(.open) .sidebar-group-badge:not(:empty) ~ .sidebar-group-chevron { margin-left:6px; }
+.sidebar-ft {
+    margin-top: auto; padding: 16px 18px;
+    border-top: 1.5px solid var(--border-light);
+}
+.sidebar-ft button {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 10px 14px; border-radius: 10px;
+    border: 1.5px solid var(--primary-soft-border); background: var(--primary-soft);
+    color: var(--danger); font-size: 0.85rem; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: background 0.15s;
+}
+.sidebar-ft button:hover { background: var(--tone-red-bg); }
+
+/* ──────────────────────────────────────────────────────────
+ * Tablas responsive — auto-scroll horizontal en móvil
+ * ──────────────────────────────────────────────────────────
+ * Antes muchas páginas (admin, distribucion, presupuestos,
+ * informe-tickets, contabilidad…) tenían tablas que reventaban
+ * el viewport en <640px porque la suma de columnas superaba el
+ * ancho disponible y no había overflow definido en su contenedor.
+ *
+ * Aplicamos un wrapper implícito vía display:block + overflow-x
+ * sólo bajo el breakpoint móvil. En escritorio mantenemos el
+ * comportamiento normal (display:table) para no romper layouts
+ * que dependen de table-layout para distribuir columnas.
+ *
+ * Las tablas de impresión/PDF (.print-table, .pdf-table, en
+ * elementos con display:none cuando no estás imprimiendo) quedan
+ * exentas porque el media query no aplica al @media print.
+ */
+@media (max-width: 640px) {
+    table:not(.no-mobile-scroll) {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+}
