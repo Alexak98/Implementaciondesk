@@ -729,74 +729,77 @@
   }
 
   function renderizarEmail(d) {
-    // Nombre del implementador para el saludo/firma del email. El panel lo usan
-    // Mario, Carlos y Hugo: no hardcodear un nombre concreto.
+    // Nombre del implementador para el saludo/firma (Mario/Carlos/Hugo).
     const IMPL_NOMBRES = { mario: 'Mario', carlos: 'Carlos', hugo: 'Hugo' };
     const implSel = (document.getElementById('selector-persona') || {}).value || '';
     const nombreImpl = IMPL_NOMBRES[implSel] || '';
     const saludo = nombreImpl ? `Buenas, ${nombreImpl} al habla.` : 'Buenas.';
-    const firma = nombreImpl ? `Un saludo, ${nombreImpl}` : 'Un saludo';
+    const firma = nombreImpl || 'el equipo de yurest';
 
-    const tarjeta = (item, tag) => `
-      <div style="border: 1px solid #E1E4ED; padding: 14px 18px; border-radius: 10px; margin-top: 10px; background: #fff;">
-        <h3 style="margin: 0 0 6px; font-size: 14px; color: #161A3D; font-family: Poppins, Arial, sans-serif; font-weight: 600;">${item.titulo}</h3>
-        <p style="margin: 0; color: #5A6075; font-size: 13px; line-height: 1.55; font-family: Poppins, Arial, sans-serif;">${item.descripcion}</p>
-      </div>`;
+    // Email maquetado según el Manual de Identidad Corporativa 2026: rojo Pantone
+    // 178C #F95A5C, navy #161A3D, grises slate, layout de tabla HTML (compat
+    // Gmail/Outlook) y fuente de sistema —los emails no cargan Bw Modelica de
+    // forma fiable—; 'yurest' siempre en minúsculas (regla B.04).
+    const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+    const LOGO = 'https://www.yurest.com/wp-content/uploads/2022/10/logotipo-yurest-rojo.png';
 
-    const tag = (texto, color) => `
-      <span style="background: ${color}; color: white; font-size: 10px; padding: 5px 11px; border-radius: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.8px; font-family: Poppins, Arial, sans-serif;">${texto}</span>`;
+    const eyebrow = (txt) => `<p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#F95A5C">${txt}</p>`;
 
-    const seccion = (etiqueta, color, titulo, items) => {
+    const tarjeta = (item) => `
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff"><tr><td style="padding:13px 18px">
+        <p style="margin:0 0 5px;font-size:14px;font-weight:700;color:#161A3D;line-height:1.35">${item.titulo}</p>
+        <p style="margin:0;font-size:13px;line-height:1.55;color:#475569">${item.descripcion}</p>
+      </td></tr></table>`;
+
+    const seccion = (etiqueta, items) => {
       if (!items || !items.length) return '';
-      return `
-        <div style="margin-top: 28px;">
-          ${tag(etiqueta, color)}
-          <h2 style="margin: 10px 0 4px; font-size: 17px; color: #161A3D; font-family: Poppins, Arial, sans-serif; font-weight: 600;">${titulo}</h2>
-          ${items.map(i => tarjeta(i)).join('')}
-        </div>`;
+      return `<tr><td style="padding:6px 40px 12px">${eyebrow(etiqueta)}${items.map(tarjeta).join('')}</td></tr>`;
     };
 
+    const infoRow = (label, val) => val
+      ? `<p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#475569"><span style="font-weight:700;color:#161A3D">${label}:</span> ${val}</p>`
+      : '';
+
+    const temas = [...(d.temas_discutidos || []), ...(d.puntos_importantes || [])];
+
     const html = `
-      <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 100%; color: #161A3D; background: #fff;">
-        <div style="background: linear-gradient(135deg, #161A3D 0%, #232851 100%); padding: 28px 28px 24px; color: white;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-            <span style="background: #F95A5C; color: white; width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;">y</span>
-            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Resumen de sesión</span>
-          </div>
-          <h1 style="margin: 0; font-size: 22px; font-weight: 600; line-height: 1.3;">${d.titulo}</h1>
-          <p style="margin: 8px 0 0; opacity: 0.75; font-size: 13px;">${d.fecha}</p>
-        </div>
-
-        <div style="padding: 20px 28px 8px;">
-          <div style="background: #F7B6B6; padding: 16px 20px; border-left: 4px solid #F95A5C; border-radius: 8px;">
-            <p style="margin: 0; color: #161A3D; font-size: 14px; line-height: 1.6;"><strong>${saludo}</strong></p>
-            <p style="margin: 8px 0 0; color: #161A3D; font-size: 14px; line-height: 1.6;">${d.intro}</p>
-          </div>
-
-                    <div style="margin-top: 24px; background: #F5F6FA; padding: 16px 20px; border-radius: 8px;">
-            <p style="margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #5A6075; font-weight: 600;">Información general</p>
-            <p style="margin: 0; font-size: 13px; line-height: 1.7;">
-              ${d.correos_invitados ? `<strong>Correos invitados:</strong> ${d.correos_invitados}<br>` : ''}
-              ${d.participantes ? `<strong>Participantes:</strong> ${d.participantes}<br>` : ''}
-              <strong>Objetivo:</strong> ${d.objetivo}
-            </p>
-          </div>
-
-                    ${seccion('Temas y puntos clave', '#F95A5C', 'Lo que abordamos en la sesión', [...(d.temas_discutidos || []), ...(d.puntos_importantes || [])])}
-          ${seccion('Tareas pendientes', '#161A3D', 'Acciones a realizar', d.tareas_pendientes)}
-        </div>
-
-        ${d.proxima_sesion ? `
-          <div style="margin: 24px 28px 0; background: linear-gradient(135deg, #161A3D 0%, #232851 100%); padding: 18px 24px; border-radius: 10px; color: white;">
-            <p style="margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.7;">Próxima sesión</p>
-            <p style="margin: 0; font-size: 14px; font-weight: 500;">${d.proxima_sesion}</p>
-          </div>` : ''}
-
-        <div style="padding: 24px 28px; text-align: center;">
-          <p style="margin: 0; font-size: 13px; color: #5A6075;">Cualquier cosa estamos en contacto.</p>
-          <p style="margin: 8px 0 0; font-size: 14px; font-weight: 600; color: #161A3D;">${firma}</p>
-        </div>
-      </div>`;
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;padding:32px 12px;font-family:${FONT}">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(15,23,42,0.08)">
+  <tr><td style="background:#161A3D;padding:22px 40px"><img src="${LOGO}" alt="yurest" style="height:26px;display:block;border:0"></td></tr>
+  <tr><td style="padding:30px 40px 6px">
+    ${eyebrow('Resumen de sesión')}
+    <h1 style="margin:0 0 6px;font-size:1.4rem;color:#161A3D;font-weight:800;line-height:1.25;letter-spacing:-0.01em">${d.titulo || ''}</h1>
+    <p style="margin:0;font-size:13px;color:#94a3b8;font-weight:600">${d.fecha || ''}</p>
+  </td></tr>
+  <tr><td style="padding:14px 40px 6px"><p style="margin:0;font-size:0.95rem;line-height:1.6;color:#475569"><strong style="color:#161A3D">${saludo}</strong> ${d.intro || ''}</p></td></tr>
+  <tr><td style="padding:8px 40px">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1.5px solid #e2e8f0;border-radius:14px;background:#f8fafc"><tr><td style="padding:16px 20px">
+      <p style="margin:0 0 10px;font-size:10.5px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8">Información general</p>
+      ${infoRow('Correos invitados', d.correos_invitados)}
+      ${infoRow('Participantes', d.participantes)}
+      ${infoRow('Objetivo', d.objetivo)}
+    </td></tr></table>
+  </td></tr>
+  ${seccion('Lo que abordamos en la sesión', temas)}
+  ${seccion('Acciones a realizar', d.tareas_pendientes)}
+  ${d.proxima_sesion ? `<tr><td style="padding:6px 40px 4px">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:12px;background:#161A3D"><tr><td style="padding:16px 22px">
+      <p style="margin:0 0 4px;font-size:10.5px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#F95A5C">Próxima sesión</p>
+      <p style="margin:0;font-size:14px;font-weight:600;color:#ffffff;line-height:1.5">${d.proxima_sesion}</p>
+    </td></tr></table></td></tr>` : ''}
+  <tr><td style="padding:22px 40px 6px">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px"><tr><td style="border-top:1.5px solid #f1f5f9"></td></tr></table>
+    <p style="margin:0;font-size:14px;color:#475569;line-height:1.7">Cualquier cosa, estamos en contacto.<br><br>Un saludo,<br><strong style="color:#161A3D">${firma}</strong></p>
+  </td></tr>
+  <tr><td style="background:#f8fafc;border-top:1.5px solid #e2e8f0;padding:16px 40px">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="font-size:11px;color:#94a3b8;line-height:1.55">© yurest Solutions S.L. · Valencia, España<br>Resumen de sesión de implementación</td>
+      <td align="right" style="font-size:11px"><a href="https://yurest.com" style="color:#F95A5C;text-decoration:none;font-weight:700">yurest.com</a></td>
+    </tr></table>
+  </td></tr>
+</table>
+</td></tr></table>`;
 
     const div = document.getElementById('resumen');
     div.innerHTML = html;
