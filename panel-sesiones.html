@@ -307,6 +307,7 @@
       <button class="btn btn-secondary" onclick="copiar()">📋 Copiar con formato</button>
       <button class="btn btn-success" id="btn-save" onclick="guardar()" disabled>💾 Guardar en Asana</button>
     </div>
+    <button class="btn btn-primary" id="btn-enviar" onclick="enviar()" disabled style="margin-top: 10px;">✉️ Enviar a los invitados</button>
     <div id="estado" class="estado"></div>
   </div>
 
@@ -434,13 +435,16 @@
   //    lo sirve el propio Node en el mismo origen (rutas con path param).
   // Así el MISMO archivo funciona en ambos entornos y se copia tal cual entre
   // el repo de trabajo (Node) y el portal Yurest (n8n) sin cambios.
+  //  • Excepción: algunos recursos (p. ej. 'enviar', envío Gmail real) SOLO
+  //    existen en n8n y se enrutan siempre a n8n, también en local.
   // Forzar n8n en local para pruebas: localStorage.setItem('panel_backend','n8n').
   const PANEL_HOSTS_PROD = ['portal.yurest.es', 'alexak98.github.io'];
   const PANEL_USA_N8N = PANEL_HOSTS_PROD.indexOf(location.hostname) !== -1 ||
     (function () { try { return localStorage.getItem('panel_backend') === 'n8n'; } catch (e) { return false; } })();
   const PANEL_BASE = ((window.YurestConfig && YurestConfig.WEBHOOK_BASE) || '') + '/panel';
+  // Recursos que sólo viven en n8n (no en el backend Node local) → siempre n8n.
+  const PANEL_SOLO_N8N = ['enviar'];
   (function () {
-    if (!PANEL_USA_N8N) return; // local Node: sin reescritura, '/api/*' lo sirve server.js
     const _f = window.fetch.bind(window);
     // recurso → nombre del query param en que se convierte el id de la ruta
     const PATH_PARAM = { projects: 'key', tasks: 'gid', notes: 'docId', 'asana-task': 'gid', cliente: 'gid' };
@@ -449,11 +453,15 @@
         const [path, qs] = url.split('?');
         const parts = path.split('/').filter(Boolean); // ['api', recurso, id?]
         const recurso = parts[1];
-        if (PATH_PARAM[recurso] && parts[2] !== undefined) {
-          const extra = PATH_PARAM[recurso] + '=' + encodeURIComponent(parts.slice(2).join('/'));
-          url = PANEL_BASE + '/' + recurso + '?' + extra + (qs ? '&' + qs : '');
-        } else {
-          url = PANEL_BASE + '/' + parts.slice(1).join('/') + (qs ? '?' + qs : '');
+        // Reescribir a n8n si es producción o si el recurso es exclusivo de n8n.
+        // En local (Node) el resto pasa tal cual al propio server.js.
+        if (PANEL_USA_N8N || PANEL_SOLO_N8N.indexOf(recurso) !== -1) {
+          if (PATH_PARAM[recurso] && parts[2] !== undefined) {
+            const extra = PATH_PARAM[recurso] + '=' + encodeURIComponent(parts.slice(2).join('/'));
+            url = PANEL_BASE + '/' + recurso + '?' + extra + (qs ? '&' + qs : '');
+          } else {
+            url = PANEL_BASE + '/' + parts.slice(1).join('/') + (qs ? '?' + qs : '');
+          }
         }
       }
       return _f(url, opts);
@@ -846,6 +854,40 @@
   function check() {
     const ok = datosResumen && document.getElementById('tarea').value;
     document.getElementById('btn-save').disabled = !ok;
+    // Enviar se habilita en cuanto hay un resumen generado (no necesita tarea).
+    const btnE = document.getElementById('btn-enviar');
+    if (btnE) btnE.disabled = !datosResumen;
+  }
+
+  async function enviar() {
+    if (!datosResumen) { estado('⚠️ Genera primero el resumen', true); return; }
+    const correos = document.getElementById('correos-invitados').value.trim();
+    if (!correos || correos.indexOf('@') === -1) {
+      estado('⚠️ Pon los correos de los invitados (separados por comas)', true); return;
+    }
+    if (!window.confirm('¿Enviar el resumen por email a: ' + correos + '?')) return;
+    const btn = document.getElementById('btn-enviar');
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Enviando...';
+    try {
+      const r = await fetch('/api/enviar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          implementador: document.getElementById('selector-persona').value,
+          correosInvitados: correos,
+          titulo: document.getElementById('titulo').value,
+          html: document.getElementById('resumen').innerHTML
+        })
+      });
+      let data = {};
+      try { data = await r.json(); } catch (e) { /* respuesta vacía */ }
+      if (!r.ok || data.error) throw new Error(data.error || 'No se pudo enviar el email');
+      estado('✓ Email enviado a ' + correos);
+    } catch (e) {
+      estado('❌ ' + e.message, true);
+    } finally {
+      btn.disabled = false; btn.innerHTML = textoOriginal;
+    }
   }
 
   function estado(msg, err) {
