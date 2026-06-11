@@ -1,0 +1,16 @@
+{
+  "name": "yurest-panel-sesiones",
+  "version": "1.0.0",
+  "description": "Servicio Node del Panel de sesiones CS (Google Drive/Docs/Calendar + YouTube + Asana + Claude). Front en ../panel-sesiones.html.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "googleapis": "^173.0.0",
+    "node-fetch": "^2.7.0",
+    "open": "^11.0.0"
+  }
+}

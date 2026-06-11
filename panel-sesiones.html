@@ -425,15 +425,22 @@
 </div><!-- /page-content -->
 
 <script>
-  // ── Routing al backend del panel en n8n ──
-  // El front llama a rutas relativas estilo '/api/<recurso>/<id>'. Este shim
-  // las reescribe a los webhooks n8n bajo WEBHOOK_BASE + '/panel', convirtiendo
-  // el id de la ruta en query param (los webhooks n8n usan rutas estáticas).
-  // El OAuth de Google/Asana lo gestiona n8n por credencial: no hay login aquí.
-  // Las llamadas del portal (config.js, sidebar) usan URLs absolutas y NO se
-  // ven afectadas por este shim.
+  // ── Routing del backend del panel (consciente del entorno) ──
+  // El front llama a rutas relativas estilo '/api/<recurso>/<id>'.
+  //  • PRODUCCIÓN (portal.yurest.es / GitHub Pages): se reescriben a los webhooks
+  //    n8n bajo WEBHOOK_BASE + '/panel', convirtiendo el id de ruta en query
+  //    param (los webhooks n8n usan rutas estáticas).
+  //  • LOCAL (servido por el backend Node server.js): NO se reescribe; '/api/*'
+  //    lo sirve el propio Node en el mismo origen (rutas con path param).
+  // Así el MISMO archivo funciona en ambos entornos y se copia tal cual entre
+  // el repo de trabajo (Node) y el portal Yurest (n8n) sin cambios.
+  // Forzar n8n en local para pruebas: localStorage.setItem('panel_backend','n8n').
+  const PANEL_HOSTS_PROD = ['portal.yurest.es', 'alexak98.github.io'];
+  const PANEL_USA_N8N = PANEL_HOSTS_PROD.indexOf(location.hostname) !== -1 ||
+    (function () { try { return localStorage.getItem('panel_backend') === 'n8n'; } catch (e) { return false; } })();
   const PANEL_BASE = ((window.YurestConfig && YurestConfig.WEBHOOK_BASE) || '') + '/panel';
   (function () {
+    if (!PANEL_USA_N8N) return; // local Node: sin reescritura, '/api/*' lo sirve server.js
     const _f = window.fetch.bind(window);
     // recurso → nombre del query param en que se convierte el id de la ruta
     const PATH_PARAM = { projects: 'key', tasks: 'gid', notes: 'docId', 'asana-task': 'gid', cliente: 'gid' };
